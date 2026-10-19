@@ -14,7 +14,7 @@
             <span>&#128100; {{ Auth::user()->name }}</span>
             <span style="font-size:10px;background:var(--panel-2);border:1px solid var(--border);padding:2px 6px;border-radius:12px;text-transform:uppercase;">{{ Auth::user()->role }}</span>
         </div>
-        <button class="icon-btn" id="theme-btn">Light mode</button>
+        <button class="icon-btn" id="theme-btn" title="Ganti Mode Tema"><span>Light mode</span></button>
         <form action="{{ route('logout') }}" method="POST" style="margin:0;">
             @csrf
             <button type="submit" class="icon-btn" title="Keluar dari akun">&#x27A1; Logout</button>
@@ -183,6 +183,6 @@
     </script>
 @endif
 
-<script src="{{ asset('js/codebook.js') }}"></script>
+<script src="{{ asset('js/codebook.js') }}?v={{ file_exists(public_path('js/codebook.js')) ? filemtime(public_path('js/codebook.js')) : time() }}"></script>
 @endsection
 

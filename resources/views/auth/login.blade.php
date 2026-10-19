@@ -14,7 +14,7 @@
         </div>
 
         @if (session('status'))
-            <div style="background:rgba(124,140,248,0.15);border:1px solid var(--other);color:var(--other);padding:10px 14px;border-radius:8px;font-size:13px;">
+            <div style="background:var(--other-bg);border:1px solid var(--other-border);color:var(--other);padding:10px 14px;border-radius:8px;font-size:13px;">
                 {{ session('status') }}
             </div>
         @endif
