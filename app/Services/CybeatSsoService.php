@@ -19,13 +19,19 @@ class CybeatSsoService
     public function login(string $email, string $password): array
     {
         try {
-            $response = Http::timeout(10)
+            $httpClient = Http::timeout(10)
                 ->acceptJson()
-                ->asJson()
-                ->post($this->loginUrl, [
-                    'email' => $email,
-                    'password' => $password,
-                ]);
+                ->asJson();
+
+            // Disable SSL verification on local environment or when configured to avoid Windows cURL 77 cacert.pem errors
+            if (app()->environment('local') || !config('services.cybeat.verify_ssl', true)) {
+                $httpClient = $httpClient->withoutVerifying();
+            }
+
+            $response = $httpClient->post($this->loginUrl, [
+                'email' => $email,
+                'password' => $password,
+            ]);
 
             $data = $response->json();
 
@@ -45,6 +51,20 @@ class CybeatSsoService
             ];
         } catch (\Exception $e) {
             Log::error('Cybeat SSO Connection Error: ' . $e->getMessage());
+
+            // If running locally and network is unreachable, fallback to local database verification
+            if (app()->environment('local')) {
+                $localUser = \App\Models\User::where('email', $email)->first();
+                if ($localUser && \Illuminate\Support\Facades\Hash::check($password, $localUser->password)) {
+                    return [
+                        'success' => true,
+                        'access_token' => 'offline-dev-access-token',
+                        'refresh_token' => 'offline-dev-refresh-token',
+                        'message' => 'Login berhasil (Offline Dev Mode)',
+                    ];
+                }
+            }
+
             return [
                 'success' => false,
                 'message' => 'Gagal terhubung ke server autentikasi Cybeat: ' . $e->getMessage(),
