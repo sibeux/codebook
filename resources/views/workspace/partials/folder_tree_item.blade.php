@@ -18,10 +18,11 @@
 
         {{-- Notes in this folder --}}
         @foreach ($folder->notes as $note)
-            <a href="{{ route('workspace', ['note' => $note->id]) }}"
-               class="tree-note {{ $activeNote && $activeNote->id === $note->id ? 'active' : '' }}"
+            <a href="{{ route('workspace', ['note' => $note->id]) }}" 
+               class="tree-note {{ $activeNote && $activeNote->id === $note->id ? 'active' : '' }}" 
                data-note-id="{{ $note->id }}"
-               data-folder-id="{{ $folder->id }}">
+               data-folder-id="{{ $folder->id }}"
+               onclick="selectNote({{ $note->id }}, event)">
                 <div class="tree-label">
                     <span class="tree-icon">&#128221;</span>
                     <span class="note-title-text">{{ $note->title }}</span>

@@ -50,9 +50,10 @@
                     Catatan Utama
                 </div>
                 @foreach ($rootNotes as $note)
-                    <a href="{{ route('workspace', ['note' => $note->id]) }}"
-                       class="tree-note {{ $activeNote && $activeNote->id === $note->id ? 'active' : '' }}"
-                       data-note-id="{{ $note->id }}">
+                    <a href="{{ route('workspace', ['note' => $note->id]) }}" 
+                       class="tree-note {{ $activeNote && $activeNote->id === $note->id ? 'active' : '' }}" 
+                       data-note-id="{{ $note->id }}"
+                       onclick="selectNote({{ $note->id }}, event)">
                         <div class="tree-label">
                             <span class="tree-icon">&#128221;</span>
                             <span class="note-title-text">{{ $note->title }}</span>
@@ -65,7 +66,7 @@
             @endif
 
             @if ($folders->count() === 0 && $rootNotes->count() === 0)
-                <div style="padding:20px 10px;text-align:center;color:var(--muted);font-size:12px;">
+                <div style="padding:20px 10px;text-align:center;color:var(--muted);font-size:12px;" id="no-items-notice">
                     Belum ada folder atau catatan. Klik tombol <strong>+ Note</strong> untuk mulai.
                 </div>
             @endif
@@ -74,57 +75,53 @@
 
     <!-- Center: Chat-like Markdown Thread -->
     <div id="thread">
-        @if ($activeNote)
-            <div class="empty-state {{ $activeNote->messages->count() > 0 ? 'd-none' : '' }}" id="empty-state" style="{{ $activeNote->messages->count() > 0 ? 'display:none;' : '' }}">
-                <div class="glyph">&gt;_</div>
-                <p>Belum ada pesan di catatan <strong>"{{ $activeNote->title }}"</strong>. Tulis markdown di panel kanan, pilih pengirim, lalu kirim untuk melihat hasil render chat bubble.</p>
-            </div>
-        @else
-            <div class="empty-state">
-                <div class="glyph">&gt;_</div>
-                <p>Tidak ada catatan yang dipilih. Pilih catatan dari panel kiri atau buat catatan baru.</p>
-                <button class="icon-btn btn-primary" onclick="openNewNoteModal()" style="margin:16px auto 0;">&#43; Buat Catatan Pertama</button>
-            </div>
-        @endif
+        <div class="empty-state" id="no-note-state" style="{{ $activeNote ? 'display:none;' : '' }}">
+            <div class="glyph">&gt;_</div>
+            <p>Tidak ada catatan yang dipilih. Pilih catatan dari panel kiri atau buat catatan baru.</p>
+            <button class="icon-btn btn-primary" onclick="openNewNoteModal()" style="margin:16px auto 0;">&#43; Buat Catatan Pertama</button>
+        </div>
+
+        <div class="empty-state" id="empty-state" style="{{ ($activeNote && $activeNote->messages->count() === 0) ? 'display:block;' : 'display:none;' }}">
+            <div class="glyph">&gt;_</div>
+            <p id="empty-state-text">Belum ada pesan di catatan <strong>"{{ $activeNote ? $activeNote->title : '' }}"</strong>. Tulis markdown di panel kanan, pilih pengirim, lalu kirim untuk melihat hasil render chat bubble.</p>
+        </div>
     </div>
 
-    <!-- Right Panel: Composer & Controls -->
-    @if ($activeNote)
-        <div id="composer">
-            <div class="panel-block">
-                <div class="panel-label">Judul Catatan</div>
-                <input type="text" id="note-title-input" class="note-title-input" value="{{ $activeNote->title }}" placeholder="Nama Catatan..." onchange="updateNoteTitle({{ $activeNote->id }}, this.value)">
-            </div>
+    <!-- Right Panel: Composer & Controls (SPA persistent) -->
+    <div id="composer" style="{{ $activeNote ? 'display:flex;' : 'display:none;' }}">
+        <div class="panel-block">
+            <div class="panel-label">Judul Catatan</div>
+            <input type="text" id="note-title-input" class="note-title-input" value="{{ $activeNote ? $activeNote->title : '' }}" placeholder="Nama Catatan..." oninput="onNoteTitleInput(this.value)">
+        </div>
 
-            <div class="panel-block">
-                <div class="panel-label">Pengirim</div>
-                <div class="sender-toggle">
-                    <button type="button" class="active me" data-sender="me">Me</button>
-                    <button type="button" class="other" data-sender="other">Other</button>
-                </div>
-            </div>
-
-            <div class="panel-block" style="flex:1;min-height:0;">
-                <div class="panel-label">Pesan Markdown</div>
-                <textarea id="msg-input" placeholder="Tulis markdown di sini... (# heading, **bold**, - list, ```kode```, dsb)"></textarea>
-                <button id="send-btn">Kirim</button>
-                <div class="hint">Ctrl / Cmd + Enter untuk kirim &middot; Auto-saved ke database &middot; Format Markdown penuh</div>
-            </div>
-
-            <div class="panel-block">
-                <div class="panel-label">Ukuran Font Chat</div>
-                <div class="font-slider-row">
-                    <input type="range" id="font-size" min="12" max="20" step="0.5" value="14.5">
-                    <span id="font-size-out">14.5px</span>
-                </div>
-            </div>
-
-            <div class="panel-block" style="flex-direction:row;gap:8px;">
-                <button class="icon-btn" id="clear-btn" style="flex:1;justify-content:center;" onclick="clearCurrentNoteMessages({{ $activeNote->id }})">Clear chat</button>
-                <button class="icon-btn" style="color:var(--danger);justify-content:center;" onclick="deleteNote({{ $activeNote->id }})" title="Hapus Catatan">&#128465;</button>
+        <div class="panel-block">
+            <div class="panel-label">Pengirim</div>
+            <div class="sender-toggle">
+                <button type="button" class="active me" data-sender="me">Me</button>
+                <button type="button" class="other" data-sender="other">Other</button>
             </div>
         </div>
-    @endif
+
+        <div class="panel-block" style="flex:1;min-height:0;">
+            <div class="panel-label">Pesan Markdown</div>
+            <textarea id="msg-input" placeholder="Tulis markdown di sini... (# heading, **bold**, - list, ```kode```, dsb)"></textarea>
+            <button id="send-btn">Kirim</button>
+            <div class="hint">Ctrl / Cmd + Enter untuk kirim &middot; Auto-saved ke database &middot; Format Markdown penuh</div>
+        </div>
+
+        <div class="panel-block">
+            <div class="panel-label">Ukuran Font Chat</div>
+            <div class="font-slider-row">
+                <input type="range" id="font-size" min="12" max="20" step="0.5" value="14.5">
+                <span id="font-size-out">14.5px</span>
+            </div>
+        </div>
+
+        <div class="panel-block" style="flex-direction:row;gap:8px;">
+            <button class="icon-btn" id="clear-btn" style="flex:1;justify-content:center;" onclick="clearCurrentNoteMessages()">Clear chat</button>
+            <button class="icon-btn" style="color:var(--danger);justify-content:center;" onclick="deleteCurrentNote()" title="Hapus Catatan">&#128465;</button>
+        </div>
+    </div>
 </main>
 
 <!-- Modal: New Folder -->

@@ -4,8 +4,12 @@ document.addEventListener('DOMContentLoaded', function () {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     const thread = document.getElementById('thread');
     const emptyState = document.getElementById('empty-state');
+    const emptyStateText = document.getElementById('empty-state-text');
+    const noNoteState = document.getElementById('no-note-state');
+    const composer = document.getElementById('composer');
     const input = document.getElementById('msg-input');
     const sendBtn = document.getElementById('send-btn');
+    const noteTitleInput = document.getElementById('note-title-input');
     const senderButtons = document.querySelectorAll('.sender-toggle button');
     const themeBtn = document.getElementById('theme-btn');
     const fontSlider = document.getElementById('font-size');
@@ -15,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     let currentSender = 'me';
     let messages = window.INITIAL_MESSAGES || [];
-    const currentNote = window.CURRENT_NOTE;
+    let titleDebounceTimeout = null;
 
     // Sender toggle
     senderButtons.forEach(function (btn) {
@@ -84,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Send Message
     async function sendMessage() {
-        if (!currentNote || !input) return;
+        if (!window.CURRENT_NOTE || !input) return;
         const text = input.value;
         if (!text.trim()) return;
 
@@ -92,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function () {
         sendBtn.disabled = true;
 
         try {
-            const res = await fetch(`/notes/${currentNote.id}/messages`, {
+            const res = await fetch(`/notes/${window.CURRENT_NOTE.id}/messages`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -123,11 +127,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Delete message
     window.deleteMessage = async function (id) {
-        if (!currentNote) return;
+        if (!window.CURRENT_NOTE) return;
         if (!confirm('Hapus pesan ini?')) return;
 
         try {
-            const res = await fetch(`/notes/${currentNote.id}/messages/${id}`, {
+            const res = await fetch(`/notes/${window.CURRENT_NOTE.id}/messages/${id}`, {
                 method: 'DELETE',
                 headers: {
                     'Accept': 'application/json',
@@ -146,12 +150,12 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     // Clear all messages
-    window.clearCurrentNoteMessages = async function (noteId) {
-        if (messages.length === 0) return;
+    window.clearCurrentNoteMessages = async function () {
+        if (!window.CURRENT_NOTE || messages.length === 0) return;
         if (!confirm('Hapus semua pesan di catatan ini?')) return;
 
         try {
-            const res = await fetch(`/notes/${noteId}/clear`, {
+            const res = await fetch(`/notes/${window.CURRENT_NOTE.id}/clear`, {
                 method: 'POST',
                 headers: {
                     'Accept': 'application/json',
@@ -185,8 +189,23 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!thread) return;
         thread.innerHTML = '';
 
+        if (!window.CURRENT_NOTE) {
+            if (noNoteState) {
+                noNoteState.style.display = 'block';
+                thread.appendChild(noNoteState);
+            }
+            if (composer) composer.style.display = 'none';
+            return;
+        }
+
+        if (composer) composer.style.display = 'flex';
+        if (noNoteState) noNoteState.style.display = 'none';
+
         if (messages.length === 0) {
             if (emptyState) {
+                if (emptyStateText) {
+                    emptyStateText.innerHTML = `Belum ada pesan di catatan <strong>"${window.CURRENT_NOTE.title}"</strong>. Tulis markdown di panel kanan, pilih pengirim, lalu kirim untuk melihat hasil render chat bubble.`;
+                }
                 emptyState.style.display = 'block';
                 thread.appendChild(emptyState);
             }
@@ -265,39 +284,130 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Initial render
-    if (currentNote && messages.length > 0) {
+    // SPA Note Selection (No full page reload)
+    window.selectNote = async function (noteId, e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        // Highlight sidebar active item immediately
+        document.querySelectorAll('.tree-note').forEach(el => el.classList.remove('active'));
+        const activeLink = document.querySelector(`.tree-note[data-note-id="${noteId}"]`);
+        if (activeLink) activeLink.classList.add('active');
+
+        try {
+            const res = await fetch(`/notes/${noteId}`, {
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            const data = await res.json();
+            if (data.success && data.note) {
+                window.CURRENT_NOTE = data.note;
+                messages = data.note.messages || [];
+
+                if (noteTitleInput) {
+                    noteTitleInput.value = data.note.title;
+                }
+
+                // Update URL cleanly without reloading
+                window.history.pushState({ noteId: data.note.id }, '', `/?note=${data.note.id}`);
+                document.title = `Codebook - ${data.note.title}`;
+
+                renderAll();
+                thread.scrollTop = thread.scrollHeight;
+            }
+        } catch (err) {
+            console.error('Failed to load note:', err);
+        }
+    };
+
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const noteId = urlParams.get('note');
+        if (noteId) {
+            window.selectNote(noteId);
+        }
+    });
+
+    // Debounced Note Title Editing
+    window.onNoteTitleInput = function (newTitle) {
+        if (!window.CURRENT_NOTE) return;
+        window.CURRENT_NOTE.title = newTitle;
+
+        // Update title in sidebar immediately
+        const activeNav = document.querySelector(`.tree-note[data-note-id="${window.CURRENT_NOTE.id}"] .note-title-text`);
+        if (activeNav) activeNav.textContent = newTitle;
+
+        clearTimeout(titleDebounceTimeout);
+        titleDebounceTimeout = setTimeout(async () => {
+            try {
+                await fetch(`/notes/${window.CURRENT_NOTE.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({ title: newTitle })
+                });
+            } catch (e) {
+                console.error('Failed to auto-save note title', e);
+            }
+        }, 500);
+    };
+
+    // Delete Current Note
+    window.deleteCurrentNote = async function () {
+        if (!window.CURRENT_NOTE) return;
+        if (!confirm(`Apakah Anda yakin ingin menghapus catatan "${window.CURRENT_NOTE.title}"?`)) return;
+
+        const noteId = window.CURRENT_NOTE.id;
+        try {
+            const res = await fetch(`/notes/${noteId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                }
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Remove from sidebar DOM
+                const navItem = document.querySelector(`.tree-note[data-note-id="${noteId}"]`);
+                if (navItem) navItem.remove();
+
+                // Select another note if available
+                const nextNote = document.querySelector('.tree-note');
+                if (nextNote) {
+                    const nextId = nextNote.getAttribute('data-note-id');
+                    window.selectNote(nextId);
+                } else {
+                    window.CURRENT_NOTE = null;
+                    messages = [];
+                    window.history.pushState({}, '', '/');
+                    renderAll();
+                }
+            }
+        } catch (e) {
+            console.error('Failed to delete note', e);
+        }
+    };
+
+    // Initial render on page load
+    if (window.CURRENT_NOTE) {
         renderAll();
         setTimeout(function () {
             thread.scrollTop = thread.scrollHeight;
         }, 100);
+    } else {
+        renderAll();
     }
 });
 
-// Update Note Title
-async function updateNoteTitle(noteId, newTitle) {
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    try {
-        const res = await fetch(`/notes/${noteId}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': csrfToken
-            },
-            body: JSON.stringify({ title: newTitle })
-        });
-        const data = await res.json();
-        if (data.success) {
-            const activeNav = document.querySelector(`.tree-note[data-note-id="${noteId}"] .note-title-text`);
-            if (activeNav) activeNav.textContent = newTitle;
-        }
-    } catch (e) {
-        console.error('Failed to update note title', e);
-    }
-}
-
-// Delete Note
+// Delete Note from sidebar item
 async function deleteNote(noteId) {
     if (!confirm('Apakah Anda yakin ingin menghapus catatan ini?')) return;
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -311,7 +421,20 @@ async function deleteNote(noteId) {
         });
         const data = await res.json();
         if (data.success) {
-            window.location.href = '/';
+            const navItem = document.querySelector(`.tree-note[data-note-id="${noteId}"]`);
+            if (navItem) navItem.remove();
+
+            if (window.CURRENT_NOTE && window.CURRENT_NOTE.id == noteId) {
+                const nextNote = document.querySelector('.tree-note');
+                if (nextNote) {
+                    window.selectNote(nextNote.getAttribute('data-note-id'));
+                } else {
+                    window.CURRENT_NOTE = null;
+                    window.INITIAL_MESSAGES = [];
+                    window.history.pushState({}, '', '/');
+                    location.reload();
+                }
+            }
         }
     } catch (e) {
         console.error('Failed to delete note', e);
@@ -332,7 +455,21 @@ async function deleteFolder(folderId) {
         });
         const data = await res.json();
         if (data.success) {
-            window.location.href = '/';
+            const folderGroup = document.querySelector(`.tree-folder-group[data-folder-id="${folderId}"]`);
+            if (folderGroup) folderGroup.remove();
+
+            // If active note was in this folder, reload or select next available
+            const activeNoteInDom = document.querySelector(`.tree-note.active`);
+            if (!activeNoteInDom) {
+                const nextNote = document.querySelector('.tree-note');
+                if (nextNote) {
+                    window.selectNote(nextNote.getAttribute('data-note-id'));
+                } else {
+                    window.CURRENT_NOTE = null;
+                    window.history.pushState({}, '', '/');
+                    location.reload();
+                }
+            }
         }
     } catch (e) {
         console.error('Failed to delete folder', e);
@@ -347,13 +484,13 @@ function toggleFolder(el, event) {
 // Filter Sidebar Tree
 function filterTree(query) {
     const q = query.toLowerCase().trim();
-    const items = document.querySelectorAll('.tree-note, .tree-folder-group');
+    const notes = document.querySelectorAll('.tree-note');
     if (!q) {
-        items.forEach(el => el.style.display = '');
+        notes.forEach(el => el.style.display = '');
         return;
     }
 
-    document.querySelectorAll('.tree-note').forEach(note => {
+    notes.forEach(note => {
         const title = note.querySelector('.note-title-text')?.textContent.toLowerCase() || '';
         const match = title.includes(q);
         note.style.display = match ? 'flex' : 'none';
@@ -382,6 +519,7 @@ function closeModal(modalId) {
     document.getElementById(modalId).classList.remove('active');
 }
 
+// Submit New Folder via SPA (no full reload)
 async function submitNewFolder(e) {
     e.preventDefault();
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -399,14 +537,51 @@ async function submitNewFolder(e) {
             body: JSON.stringify({ name, parent_id: parentId || null })
         });
         const data = await res.json();
-        if (data.success) {
-            window.location.reload();
+        if (data.success && data.folder) {
+            closeModal('newFolderModal');
+            // Dynamically inject folder into tree
+            const tree = document.getElementById('sidebar-tree');
+            const noNotice = document.getElementById('no-items-notice');
+            if (noNotice) noNotice.remove();
+
+            const folderHtml = `
+                <div class="tree-folder-group" data-folder-id="${data.folder.id}">
+                    <div class="tree-folder" onclick="toggleFolder(this, event)">
+                        <div class="tree-label">
+                            <span class="tree-icon folder-icon">&#128193;</span>
+                            <span class="folder-name">${data.folder.name}</span>
+                        </div>
+                        <div class="item-actions" onclick="event.stopPropagation()">
+                            <button class="mini-btn" title="Tambah Catatan di Folder ini" onclick="openNewNoteModal(${data.folder.id})">&#43; note</button>
+                            <button class="mini-btn danger" title="Hapus Folder" onclick="deleteFolder(${data.folder.id})">&times;</button>
+                        </div>
+                    </div>
+                    <div class="tree-children"></div>
+                </div>
+            `;
+
+            if (parentId) {
+                const parentGroup = document.querySelector(`.tree-folder-group[data-folder-id="${parentId}"] .tree-children`);
+                if (parentGroup) parentGroup.insertAdjacentHTML('beforeend', folderHtml);
+            } else {
+                tree.insertAdjacentHTML('afterbegin', folderHtml);
+            }
+
+            // Also add option to note modal select
+            const select = document.getElementById('note-folder-select');
+            if (select) {
+                const opt = document.createElement('option');
+                opt.value = data.folder.id;
+                opt.textContent = data.folder.name;
+                select.appendChild(opt);
+            }
         }
     } catch (err) {
         alert('Gagal membuat folder.');
     }
 }
 
+// Submit New Note via SPA (no full reload)
 async function submitNewNote(e) {
     e.preventDefault();
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -425,10 +600,41 @@ async function submitNewNote(e) {
         });
         const data = await res.json();
         if (data.success && data.note) {
-            window.location.href = `/?note=${data.note.id}`;
+            closeModal('newNoteModal');
+
+            const noNotice = document.getElementById('no-items-notice');
+            if (noNotice) noNotice.remove();
+
+            const noteHtml = `
+                <a href="/?note=${data.note.id}" 
+                   class="tree-note active" 
+                   data-note-id="${data.note.id}"
+                   ${folderId ? `data-folder-id="${folderId}"` : ''}
+                   onclick="selectNote(${data.note.id}, event)">
+                    <div class="tree-label">
+                        <span class="tree-icon">&#128221;</span>
+                        <span class="note-title-text">${data.note.title}</span>
+                    </div>
+                    <div class="item-actions" onclick="event.preventDefault(); event.stopPropagation()">
+                        <button class="mini-btn danger" title="Hapus Catatan" onclick="deleteNote(${data.note.id})">&times;</button>
+                    </div>
+                </a>
+            `;
+
+            if (folderId) {
+                const folderChildren = document.querySelector(`.tree-folder-group[data-folder-id="${folderId}"] .tree-children`);
+                if (folderChildren) {
+                    folderChildren.insertAdjacentHTML('beforeend', noteHtml);
+                }
+            } else {
+                const tree = document.getElementById('sidebar-tree');
+                tree.insertAdjacentHTML('beforeend', noteHtml);
+            }
+
+            // Select this newly created note in-place without page reload
+            window.selectNote(data.note.id);
         }
     } catch (err) {
         alert('Gagal membuat catatan.');
     }
 }
-
