@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Markdown Chat Viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<link id="hljs-light" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-light.min.css" disabled>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <h1>Markdown Chat Viewer</h1>
+    <span>session only</span>
+  </div>
+  <div class="header-actions">
+    <button class="icon-btn" id="theme-btn">Light mode</button>
+  </div>
+</header>
+
+<main>
+  <div id="thread">
+    <div class="empty-state" id="empty-state">
+      <div class="glyph">&gt;_</div>
+      <p>Belum ada pesan. Tulis markdown di panel kanan, pilih pengirim, lalu kirim untuk melihat hasil render-nya sebagai chat bubble.</p>
+    </div>
+  </div>
+
+  <div id="composer">
+    <div class="panel-block">
+      <div class="panel-label">Pengirim</div>
+      <div class="sender-toggle">
+        <button type="button" class="active me" data-sender="me">Me</button>
+        <button type="button" class="other" data-sender="other">Other</button>
+      </div>
+    </div>
+
+    <div class="panel-block" style="flex:1;min-height:0;">
+      <div class="panel-label">Pesan</div>
+      <textarea id="msg-input" placeholder="Tulis markdown di sini... (# heading, **bold**, - list, kode, dst)"></textarea>
+      <button id="send-btn">Kirim</button>
+      <div class="hint">Ctrl/Cmd + Enter untuk kirim &middot; tanpa batas panjang teks &middot; data hilang saat tab ditutup</div>
+    </div>
+
+    <div class="panel-block">
+      <div class="panel-label">Ukuran font chat</div>
+      <div class="font-slider-row">
+        <input type="range" id="font-size" min="12" max="20" step="0.5" value="14.5">
+        <span id="font-size-out">14.5px</span>
+      </div>
+    </div>
+
+    <div class="panel-block">
+      <button class="icon-btn" id="clear-btn">Clear all</button>
+    </div>
+  </div>
+</main>
+
+<script src="js/script.js"></script>
+
+</body>
+</html>
