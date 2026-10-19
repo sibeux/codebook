@@ -37,13 +37,6 @@
                 <input type="password" id="password" name="password" class="form-control" required placeholder="••••••••">
             </div>
 
-            <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:2px;">
-                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-                    <input type="checkbox" name="remember" value="1" checked style="accent-color:var(--me);">
-                    Ingat saya
-                </label>
-            </div>
-
             <button type="submit" id="send-btn" style="margin-top:6px;">Masuk via SSO</button>
         </form>
 

@@ -53,7 +53,7 @@ class AuthController extends Controller
             ]);
         }
 
-        Auth::login($user, $request->boolean('remember', true));
+        Auth::login($user);
 
         $request->session()->regenerate();
 

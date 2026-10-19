@@ -43,4 +43,19 @@ class User extends Authenticatable
     {
         return $this->hasMany(Note::class, 'user_id', 'user_id');
     }
+
+    public function getRememberToken()
+    {
+        return null;
+    }
+
+    public function setRememberToken($value)
+    {
+        // No-op: Cybeat users table has no remember_token column
+    }
+
+    public function getRememberTokenName()
+    {
+        return '';
+    }
 }
