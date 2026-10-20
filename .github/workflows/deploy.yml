@@ -1,0 +1,88 @@
+name: Build and Deploy Codebook
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-codebook-production
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_mysql, bcmath, fileinfo
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci || npm install
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Install SSH password client
+        run: sudo apt-get update && sudo apt-get install -y sshpass
+
+      - name: Deploy application to shared hosting
+        env:
+          SSHPASS: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          tar -czf - \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='storage/logs/*.log' \
+            . | sshpass -e ssh \
+            -p 2223 \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            sibn9212@jembayan.iixcp.rumahweb.net \
+            '
+              target="public_html/codebook.sibeux.my.id"
+              mkdir -p "$target"
+              tar -xzf - -C "$target"
+
+              cd "$target"
+
+              # Pastikan direktori writable
+              chmod -R 775 storage bootstrap/cache 2>/dev/null || true
+
+              # Setup symlink storage jika belum ada
+              php artisan storage:link 2>/dev/null || true
+
+              # Jalankan migrasi database
+              php artisan migrate --force
+
+              # Cache konfigurasi untuk performa optimal di production
+              php artisan optimize:clear
+              php artisan config:cache
+              php artisan route:cache
+              php artisan view:cache
+            '

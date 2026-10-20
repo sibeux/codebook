@@ -1,0 +1,16 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Cegah loop jika request sudah mengarah ke public/
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Blokir akses langsung ke file konfigurasi & sensitif
+<FilesMatch "^\.env|composer\.(json|lock)|package(-lock)?\.json|artisan|phpunit\.xml">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Blokir akses ke folder internal dan vendor secara langsung
+RedirectMatch 404 ^/(app|bootstrap|config|database|resources|routes|vendor)/.*$
