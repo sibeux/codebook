@@ -40,10 +40,47 @@ class FolderController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
             'parent_id' => ['nullable', 'exists:folders,id'],
             'icon' => ['nullable', 'string', 'max:50'],
         ]);
+
+        if (array_key_exists('parent_id', $validated) && $validated['parent_id'] !== null) {
+            // Cannot set parent to itself
+            if ((int) $validated['parent_id'] === (int) $folder->id) {
+                if ($request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => 'Folder tidak bisa menjadi parent dari dirinya sendiri.'], 422);
+                }
+
+                return back()->withErrors(['parent_id' => 'Folder tidak bisa menjadi parent dari dirinya sendiri.']);
+            }
+
+            // Ensure target parent belongs to current user
+            $targetParent = Folder::where('id', $validated['parent_id'])
+                ->where('user_id', Auth::id())
+                ->first();
+
+            if (! $targetParent) {
+                if ($request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => 'Folder tujuan tidak ditemukan.'], 422);
+                }
+
+                return back()->withErrors(['parent_id' => 'Folder tujuan tidak ditemukan.']);
+            }
+
+            // Prevent circular reference (cannot move to descendant)
+            $curr = $targetParent;
+            while ($curr) {
+                if ((int) $curr->id === (int) $folder->id) {
+                    if ($request->wantsJson()) {
+                        return response()->json(['success' => false, 'message' => 'Tidak bisa memindahkan folder ke dalam subfolder miliknya.'], 422);
+                    }
+
+                    return back()->withErrors(['parent_id' => 'Tidak bisa memindahkan folder ke dalam subfolder miliknya.']);
+                }
+                $curr = $curr->parent;
+            }
+        }
 
         $folder->update($validated);
 
@@ -72,4 +109,3 @@ class FolderController extends Controller
         return redirect()->route('workspace')->with('status', 'Folder berhasil dihapus.');
     }
 }
-

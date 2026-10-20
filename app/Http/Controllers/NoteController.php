@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Folder;
 use App\Models\Note;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -58,6 +59,20 @@ class NoteController extends Controller
             'is_pinned' => ['sometimes', 'boolean'],
         ]);
 
+        if (array_key_exists('folder_id', $validated) && $validated['folder_id'] !== null) {
+            $folder = Folder::where('id', $validated['folder_id'])
+                ->where('user_id', Auth::id())
+                ->first();
+
+            if (! $folder) {
+                if ($request->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => 'Folder tujuan tidak valid.'], 422);
+                }
+
+                return back()->withErrors(['folder_id' => 'Folder tujuan tidak valid.']);
+            }
+        }
+
         $note->update($validated);
 
         if ($request->wantsJson()) {
@@ -85,4 +100,3 @@ class NoteController extends Controller
         return redirect()->route('workspace')->with('status', 'Catatan berhasil dihapus.');
     }
 }
-

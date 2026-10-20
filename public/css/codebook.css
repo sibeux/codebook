@@ -439,6 +439,70 @@ main {
   background: var(--danger-bg);
 }
 
+/* Drag and Drop Styling */
+.tree-folder[draggable="true"],
+.tree-note[draggable="true"] {
+  cursor: grab;
+}
+
+.tree-folder[draggable="true"]:active,
+.tree-note[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.tree-note.is-dragging,
+.tree-folder-group.is-dragging,
+.tree-folder.is-dragging {
+  opacity: 0.45;
+  filter: grayscale(0.6);
+  transform: scale(0.98);
+}
+
+.tree-folder.drag-target-hover {
+  background: var(--active-item-bg) !important;
+  color: var(--me) !important;
+  outline: 2px dashed var(--me);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
+.root-dropzone {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 10px 8px;
+  border: 1.5px dashed var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+body.is-drag-active .root-dropzone {
+  display: flex;
+}
+
+.root-dropzone.drag-target-hover {
+  border-color: var(--me);
+  background: var(--active-item-bg);
+  color: var(--me);
+  transform: scale(1.02);
+}
+
+@keyframes itemMovedPulse {
+  0% { background: var(--active-item-bg); transform: scale(1.02); }
+  50% { background: var(--panel-hover); transform: scale(1); }
+  100% { background: transparent; }
+}
+
+.item-moved-highlight {
+  animation: itemMovedPulse 0.8s ease;
+}
+
 /* Thread Area */
 #thread {
   flex: 1;

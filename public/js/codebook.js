@@ -627,7 +627,7 @@ async function submitNewFolder(e) {
 
             const folderHtml = `
                 <div class="tree-folder-group" data-folder-id="${data.folder.id}">
-                    <div class="tree-folder" onclick="toggleFolder(this, event)">
+                    <div class="tree-folder" draggable="true" data-folder-id="${data.folder.id}" onclick="toggleFolder(this, event)">
                         <div class="tree-label">
                             <span class="tree-icon folder-icon">&#128193;</span>
                             <span class="folder-name">${data.folder.name}</span>
@@ -645,7 +645,8 @@ async function submitNewFolder(e) {
                 const parentGroup = document.querySelector(`.tree-folder-group[data-folder-id="${parentId}"] .tree-children`);
                 if (parentGroup) parentGroup.insertAdjacentHTML('beforeend', folderHtml);
             } else {
-                tree.insertAdjacentHTML('afterbegin', folderHtml);
+                const container = document.getElementById('folders-container') || tree;
+                container.insertAdjacentHTML('afterbegin', folderHtml);
             }
 
             // Also add option to note modal select
@@ -689,6 +690,7 @@ async function submitNewNote(e) {
             const noteHtml = `
                 <a href="/?note=${data.note.id}" 
                    class="tree-note active" 
+                   draggable="true"
                    data-note-id="${data.note.id}"
                    ${folderId ? `data-folder-id="${folderId}"` : ''}
                    onclick="selectNote(${data.note.id}, event)">
@@ -708,8 +710,10 @@ async function submitNewNote(e) {
                     folderChildren.insertAdjacentHTML('beforeend', noteHtml);
                 }
             } else {
-                const tree = document.getElementById('sidebar-tree');
-                tree.insertAdjacentHTML('beforeend', noteHtml);
+                const rootSection = document.getElementById('root-notes-section');
+                if (rootSection) rootSection.style.display = 'block';
+                const container = document.getElementById('root-notes-container') || document.getElementById('sidebar-tree');
+                container.insertAdjacentHTML('beforeend', noteHtml);
             }
 
             // Select this newly created note in-place without page reload
@@ -719,3 +723,311 @@ async function submitNewNote(e) {
         alert('Gagal membuat catatan.');
     }
 }
+
+// -----------------------------------------------------------------------------
+// Drag & Drop Functionality for Sidebar Tree
+// -----------------------------------------------------------------------------
+let draggedItem = null;
+let folderExpandTimeout = null;
+
+function initSidebarDragAndDrop() {
+    const sidebar = document.getElementById('sidebar');
+    if (!sidebar) return;
+
+    // Drag Start
+    sidebar.addEventListener('dragstart', function (e) {
+        // Prevent drag when clicking action buttons
+        if (e.target.closest('.item-actions') || e.target.closest('button')) {
+            e.preventDefault();
+            return;
+        }
+
+        const noteEl = e.target.closest('.tree-note');
+        const folderHeader = e.target.closest('.tree-folder');
+
+        if (noteEl) {
+            draggedItem = {
+                type: 'note',
+                id: noteEl.getAttribute('data-note-id'),
+                el: noteEl,
+                folderId: noteEl.getAttribute('data-folder-id') || null
+            };
+            noteEl.classList.add('is-dragging');
+            document.body.classList.add('is-drag-active');
+            e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'note', id: draggedItem.id }));
+            e.dataTransfer.effectAllowed = 'move';
+            return;
+        }
+
+        if (folderHeader) {
+            const folderGroup = folderHeader.closest('.tree-folder-group');
+            if (!folderGroup) return;
+
+            draggedItem = {
+                type: 'folder',
+                id: folderHeader.getAttribute('data-folder-id'),
+                el: folderGroup,
+                headerEl: folderHeader
+            };
+            folderGroup.classList.add('is-dragging');
+            document.body.classList.add('is-drag-active');
+            e.dataTransfer.setData('text/plain', JSON.stringify({ type: 'folder', id: draggedItem.id }));
+            e.dataTransfer.effectAllowed = 'move';
+        }
+    });
+
+    // Drag End
+    sidebar.addEventListener('dragend', function () {
+        if (draggedItem && draggedItem.el) {
+            draggedItem.el.classList.remove('is-dragging');
+        }
+        document.body.classList.remove('is-drag-active');
+        document.querySelectorAll('.drag-target-hover').forEach(el => el.classList.remove('drag-target-hover'));
+        if (folderExpandTimeout) {
+            clearTimeout(folderExpandTimeout);
+            folderExpandTimeout = null;
+        }
+        draggedItem = null;
+    });
+
+    // Drag Over
+    sidebar.addEventListener('dragover', function (e) {
+        if (!draggedItem) return;
+
+        const targetFolder = e.target.closest('.tree-folder');
+        const targetNote = e.target.closest('.tree-note');
+        const rootDropzone = e.target.closest('#root-dropzone');
+        const rootSection = e.target.closest('#root-notes-section');
+        const foldersContainer = e.target.closest('#folders-container');
+
+        if (targetFolder) {
+            const targetId = targetFolder.getAttribute('data-folder-id');
+            // Folder cannot be dropped onto itself or its own subfolder
+            if (draggedItem.type === 'folder') {
+                if (draggedItem.id === targetId || draggedItem.el.contains(targetFolder)) {
+                    return;
+                }
+            }
+
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            if (!targetFolder.classList.contains('drag-target-hover')) {
+                document.querySelectorAll('.drag-target-hover').forEach(el => el.classList.remove('drag-target-hover'));
+                targetFolder.classList.add('drag-target-hover');
+            }
+
+            // Auto-expand collapsed folder on prolonged hover
+            if (targetFolder.classList.contains('collapsed') && !folderExpandTimeout) {
+                folderExpandTimeout = setTimeout(() => {
+                    targetFolder.classList.remove('collapsed');
+                }, 550);
+            }
+            return;
+        }
+
+        if (targetNote && draggedItem.type === 'note' && targetNote !== draggedItem.el) {
+            // Dragging note over another note
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            return;
+        }
+
+        if (rootDropzone || rootSection || (foldersContainer && draggedItem.type === 'folder')) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+
+            const dropTarget = rootDropzone || document.getElementById('root-dropzone');
+            if (dropTarget && !dropTarget.classList.contains('drag-target-hover')) {
+                document.querySelectorAll('.drag-target-hover').forEach(el => el.classList.remove('drag-target-hover'));
+                dropTarget.classList.add('drag-target-hover');
+            }
+        }
+    });
+
+    // Drag Leave
+    sidebar.addEventListener('dragleave', function (e) {
+        const targetFolder = e.target.closest('.tree-folder');
+        const rootDropzone = e.target.closest('#root-dropzone');
+
+        if (targetFolder && !targetFolder.contains(e.relatedTarget)) {
+            targetFolder.classList.remove('drag-target-hover');
+            if (folderExpandTimeout) {
+                clearTimeout(folderExpandTimeout);
+                folderExpandTimeout = null;
+            }
+        }
+
+        if (rootDropzone && !rootDropzone.contains(e.relatedTarget)) {
+            rootDropzone.classList.remove('drag-target-hover');
+        }
+    });
+
+    // Drop
+    sidebar.addEventListener('drop', function (e) {
+        if (!draggedItem) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const targetFolder = e.target.closest('.tree-folder');
+        const targetNote = e.target.closest('.tree-note');
+        const rootDropzone = e.target.closest('#root-dropzone');
+        const rootSection = e.target.closest('#root-notes-section');
+        const foldersContainer = e.target.closest('#folders-container');
+
+        document.querySelectorAll('.drag-target-hover').forEach(el => el.classList.remove('drag-target-hover'));
+        if (folderExpandTimeout) {
+            clearTimeout(folderExpandTimeout);
+            folderExpandTimeout = null;
+        }
+
+        if (targetFolder) {
+            const targetFolderId = targetFolder.getAttribute('data-folder-id');
+            if (draggedItem.type === 'note') {
+                if (draggedItem.folderId != targetFolderId) {
+                    moveNoteToFolder(draggedItem.id, targetFolderId);
+                }
+            } else if (draggedItem.type === 'folder') {
+                if (draggedItem.id !== targetFolderId && !draggedItem.el.contains(targetFolder)) {
+                    moveFolderToParent(draggedItem.id, targetFolderId);
+                }
+            }
+            return;
+        }
+
+        if (targetNote && draggedItem.type === 'note' && targetNote !== draggedItem.el) {
+            const targetFolderId = targetNote.getAttribute('data-folder-id') || null;
+            if (draggedItem.folderId != targetFolderId) {
+                moveNoteToFolder(draggedItem.id, targetFolderId);
+            }
+            return;
+        }
+
+        if (rootDropzone || rootSection || (foldersContainer && draggedItem.type === 'folder')) {
+            if (draggedItem.type === 'note') {
+                if (draggedItem.folderId !== null && draggedItem.folderId !== '') {
+                    moveNoteToFolder(draggedItem.id, null);
+                }
+            } else if (draggedItem.type === 'folder') {
+                moveFolderToParent(draggedItem.id, null);
+            }
+        }
+    });
+}
+
+// Move Note API & DOM Update
+async function moveNoteToFolder(noteId, targetFolderId) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const noteEl = document.querySelector(`.tree-note[data-note-id="${noteId}"]`);
+    if (!noteEl) return;
+
+    try {
+        const res = await fetch(`/notes/${noteId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ folder_id: targetFolderId ? parseInt(targetFolderId, 10) : null })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            if (targetFolderId) {
+                noteEl.setAttribute('data-folder-id', targetFolderId);
+                const targetGroup = document.querySelector(`.tree-folder-group[data-folder-id="${targetFolderId}"]`);
+                if (targetGroup) {
+                    let children = targetGroup.querySelector('.tree-children');
+                    if (!children) {
+                        children = document.createElement('div');
+                        children.className = 'tree-children';
+                        targetGroup.appendChild(children);
+                    }
+                    children.appendChild(noteEl);
+
+                    const folderHeader = targetGroup.querySelector('.tree-folder');
+                    if (folderHeader) folderHeader.classList.remove('collapsed');
+                }
+            } else {
+                noteEl.removeAttribute('data-folder-id');
+                const rootSection = document.getElementById('root-notes-section');
+                const rootContainer = document.getElementById('root-notes-container');
+                if (rootSection) rootSection.style.display = 'block';
+                if (rootContainer) rootContainer.appendChild(noteEl);
+            }
+
+            // Check if root notes section is now empty
+            const rootContainer = document.getElementById('root-notes-container');
+            const rootSection = document.getElementById('root-notes-section');
+            if (rootContainer && rootSection && rootContainer.children.length === 0) {
+                rootSection.style.display = 'none';
+            }
+
+            noteEl.classList.add('item-moved-highlight');
+            setTimeout(() => noteEl.classList.remove('item-moved-highlight'), 800);
+        } else {
+            alert(data.message || 'Gagal memindahkan catatan.');
+        }
+    } catch (err) {
+        console.error('Failed to move note:', err);
+        alert('Gagal memindahkan catatan.');
+    }
+}
+
+// Move Folder API & DOM Update
+async function moveFolderToParent(folderId, targetParentId) {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    const folderGroup = document.querySelector(`.tree-folder-group[data-folder-id="${folderId}"]`);
+    if (!folderGroup) return;
+
+    try {
+        const res = await fetch(`/folders/${folderId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ parent_id: targetParentId ? parseInt(targetParentId, 10) : null })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+            if (targetParentId) {
+                const targetGroup = document.querySelector(`.tree-folder-group[data-folder-id="${targetParentId}"]`);
+                if (targetGroup) {
+                    let children = targetGroup.querySelector('.tree-children');
+                    if (!children) {
+                        children = document.createElement('div');
+                        children.className = 'tree-children';
+                        targetGroup.appendChild(children);
+                    }
+                    children.appendChild(folderGroup);
+
+                    const folderHeader = targetGroup.querySelector('.tree-folder');
+                    if (folderHeader) folderHeader.classList.remove('collapsed');
+                }
+            } else {
+                const foldersContainer = document.getElementById('folders-container') || document.getElementById('sidebar-tree');
+                if (foldersContainer) {
+                    foldersContainer.appendChild(folderGroup);
+                }
+            }
+
+            folderGroup.classList.add('item-moved-highlight');
+            setTimeout(() => folderGroup.classList.remove('item-moved-highlight'), 800);
+        } else {
+            alert(data.message || 'Gagal memindahkan folder.');
+        }
+    } catch (err) {
+        console.error('Failed to move folder:', err);
+        alert('Gagal memindahkan folder.');
+    }
+}
+
+// Initialize on DOM load
+document.addEventListener('DOMContentLoaded', function () {
+    initSidebarDragAndDrop();
+});

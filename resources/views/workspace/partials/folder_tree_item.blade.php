@@ -1,5 +1,5 @@
 <div class="tree-folder-group" data-folder-id="{{ $folder->id }}">
-    <div class="tree-folder" onclick="toggleFolder(this, event)">
+    <div class="tree-folder" draggable="true" data-folder-id="{{ $folder->id }}" onclick="toggleFolder(this, event)">
         <div class="tree-label">
             <span class="tree-icon folder-icon">&#128193;</span>
             <span class="folder-name">{{ $folder->name }}</span>
@@ -20,6 +20,7 @@
         @foreach ($folder->notes as $note)
             <a href="{{ route('workspace', ['note' => $note->id]) }}" 
                class="tree-note {{ $activeNote && $activeNote->id === $note->id ? 'active' : '' }}" 
+               draggable="true"
                data-note-id="{{ $note->id }}"
                data-folder-id="{{ $folder->id }}"
                onclick="selectNote({{ $note->id }}, event)">

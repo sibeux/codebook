@@ -58,30 +58,40 @@
 
         <div class="sidebar-tree" id="sidebar-tree">
             {{-- Folders --}}
-            @foreach ($folders as $folder)
-                @include('workspace.partials.folder_tree_item', ['folder' => $folder, 'activeNote' => $activeNote])
-            @endforeach
+            <div class="folders-container" id="folders-container">
+                @foreach ($folders as $folder)
+                    @include('workspace.partials.folder_tree_item', ['folder' => $folder, 'activeNote' => $activeNote])
+                @endforeach
+            </div>
 
             {{-- Root Notes (Notes without a folder) --}}
-            @if ($rootNotes->count() > 0)
-                <div style="font-size:11px;color:var(--muted);font-weight:600;padding:8px 6px 4px;text-transform:uppercase;letter-spacing:0.5px;">
+            <div class="root-notes-section" id="root-notes-section" style="{{ $rootNotes->count() === 0 ? 'display:none;' : '' }}">
+                <div class="root-notes-header" style="font-size:11px;color:var(--muted);font-weight:600;padding:8px 6px 4px;text-transform:uppercase;letter-spacing:0.5px;">
                     Catatan Utama
                 </div>
-                @foreach ($rootNotes as $note)
-                    <a href="{{ route('workspace', ['note' => $note->id]) }}" 
-                       class="tree-note {{ $activeNote && $activeNote->id === $note->id ? 'active' : '' }}" 
-                       data-note-id="{{ $note->id }}"
-                       onclick="selectNote({{ $note->id }}, event)">
-                        <div class="tree-label">
-                            <span class="tree-icon">&#128221;</span>
-                            <span class="note-title-text">{{ $note->title }}</span>
-                        </div>
-                        <div class="item-actions" onclick="event.preventDefault(); event.stopPropagation()">
-                            <button class="mini-btn danger" title="Hapus Catatan" onclick="deleteNote({{ $note->id }})">&times;</button>
-                        </div>
-                    </a>
-                @endforeach
-            @endif
+                <div class="root-notes-container" id="root-notes-container">
+                    @foreach ($rootNotes as $note)
+                        <a href="{{ route('workspace', ['note' => $note->id]) }}" 
+                           class="tree-note {{ $activeNote && $activeNote->id === $note->id ? 'active' : '' }}" 
+                           draggable="true"
+                           data-note-id="{{ $note->id }}"
+                           onclick="selectNote({{ $note->id }}, event)">
+                            <div class="tree-label">
+                                <span class="tree-icon">&#128221;</span>
+                                <span class="note-title-text">{{ $note->title }}</span>
+                            </div>
+                            <div class="item-actions" onclick="event.preventDefault(); event.stopPropagation()">
+                                <button class="mini-btn danger" title="Hapus Catatan" onclick="deleteNote({{ $note->id }})">&times;</button>
+                            </div>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+
+            {{-- Root Drop Zone (appears when dragging to drop item back to root level) --}}
+            <div class="root-dropzone" id="root-dropzone" title="Tarik ke sini untuk memindahkan ke tingkat terluar (tanpa folder)">
+                <span>&darr; Lepas di sini untuk pindah ke Root</span>
+            </div>
 
             @if ($folders->count() === 0 && $rootNotes->count() === 0)
                 <div style="padding:20px 10px;text-align:center;color:var(--muted);font-size:12px;" id="no-items-notice">
