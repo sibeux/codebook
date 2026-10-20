@@ -5,6 +5,12 @@
 @section('content')
 <header>
     <div class="brand">
+        <button type="button" class="icon-btn sidebar-toggle-btn" id="sidebar-toggle-btn" title="Buka / Tutup Sidebar (Ctrl+B)" aria-label="Toggle Sidebar">
+            <svg class="icon-sidebar" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="9" y1="3" x2="9" y2="21"></line>
+            </svg>
+        </button>
         <h1>Codebook</h1>
         <span>Markdown Mode</span>
     </div>
@@ -23,6 +29,13 @@
 </header>
 
 <main>
+    <!-- Floating toggle button to reopen sidebar when collapsed -->
+    <button type="button" class="sidebar-floating-toggle" id="sidebar-floating-toggle" title="Buka Sidebar (Ctrl+B)" aria-label="Buka Sidebar">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+    </button>
+
     <!-- Sidebar: Directory Explorer -->
     <aside id="sidebar">
         <div class="sidebar-header">
@@ -31,6 +44,11 @@
                 <div class="sidebar-quick-actions">
                     <button class="icon-btn" onclick="openNewFolderModal()" title="Buat Folder Baru" style="padding:4px 8px;font-size:11px;">&#43; Folder</button>
                     <button class="icon-btn btn-primary" onclick="openNewNoteModal()" title="Buat Catatan Baru" style="padding:4px 8px;font-size:11px;">&#43; Note</button>
+                    <button type="button" class="icon-btn sidebar-close-btn" id="sidebar-close-btn" title="Tutup / Minimize Sidebar" style="padding:4px 7px;font-size:11px;" aria-label="Tutup Sidebar">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="15 18 9 12 15 6"></polyline>
+                        </svg>
+                    </button>
                 </div>
             </div>
             <div class="sidebar-search">

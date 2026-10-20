@@ -26,6 +26,9 @@
             if (savedTheme === 'light' || (!savedTheme && prefersLight)) {
                 document.documentElement.setAttribute('data-theme', 'light');
             }
+            if (localStorage.getItem('codebook_sidebar_collapsed') === 'true') {
+                document.documentElement.classList.add('sidebar-collapsed');
+            }
         })();
     </script>
     @yield('styles')

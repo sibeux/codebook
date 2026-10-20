@@ -81,6 +81,74 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Sidebar Collapse / Minimize Handling
+    const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
+    const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+    const sidebarFloatingToggle = document.getElementById('sidebar-floating-toggle');
+
+    function updateSidebarToggleAria(isCollapsed) {
+        if (sidebarToggleBtn) {
+            sidebarToggleBtn.setAttribute('title', isCollapsed ? 'Buka Sidebar (Ctrl+B)' : 'Tutup Sidebar (Ctrl+B)');
+            sidebarToggleBtn.setAttribute('aria-expanded', !isCollapsed);
+        }
+    }
+
+    function toggleSidebar(forceState) {
+        const isCurrentlyCollapsed = document.documentElement.classList.contains('sidebar-collapsed');
+        const shouldCollapse = (typeof forceState === 'boolean') ? forceState : !isCurrentlyCollapsed;
+
+        if (shouldCollapse) {
+            document.documentElement.classList.add('sidebar-collapsed');
+            localStorage.setItem('codebook_sidebar_collapsed', 'true');
+        } else {
+            document.documentElement.classList.remove('sidebar-collapsed');
+            localStorage.setItem('codebook_sidebar_collapsed', 'false');
+        }
+
+        updateSidebarToggleAria(shouldCollapse);
+    }
+
+    // Set initial aria / title
+    updateSidebarToggleAria(document.documentElement.classList.contains('sidebar-collapsed'));
+
+    if (sidebarToggleBtn) {
+        sidebarToggleBtn.addEventListener('click', function () {
+            toggleSidebar();
+        });
+    }
+
+    if (sidebarCloseBtn) {
+        sidebarCloseBtn.addEventListener('click', function () {
+            toggleSidebar(true);
+        });
+    }
+
+    if (sidebarFloatingToggle) {
+        sidebarFloatingToggle.addEventListener('click', function () {
+            toggleSidebar(false);
+        });
+    }
+
+    // Keyboard shortcuts: Ctrl+B / Cmd+B (when not typing in inputs/textareas) and Ctrl+\ / Cmd+\
+    document.addEventListener('keydown', function (e) {
+        const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+        if (!isCtrlOrCmd) return;
+
+        if (e.key === '\\') {
+            e.preventDefault();
+            toggleSidebar();
+            return;
+        }
+
+        if (e.key.toLowerCase() === 'b') {
+            const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+            if (activeTag !== 'textarea' && activeTag !== 'input') {
+                e.preventDefault();
+                toggleSidebar();
+            }
+        }
+    });
+
     // Keyboard shortcut for Kirim
     if (input) {
         input.addEventListener('keydown', function (e) {
@@ -326,6 +394,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 renderAll();
                 thread.scrollTop = thread.scrollHeight;
+
+                if (window.innerWidth <= 768) {
+                    toggleSidebar(true);
+                }
             }
         } catch (err) {
             console.error('Failed to load note:', err);
