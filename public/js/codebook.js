@@ -1,3 +1,90 @@
+// Reusable Custom Confirmation Modal (Promise-based)
+let activeConfirmCallback = null;
+
+function showConfirmModal(options = {}) {
+    const {
+        title = 'Konfirmasi Hapus',
+        message = 'Apakah Anda yakin ingin menghapus item ini? Tindakan ini tidak dapat dibatalkan.',
+        confirmText = 'Hapus',
+        cancelText = 'Batal',
+        danger = true
+    } = options;
+
+    return new Promise(function (resolve) {
+        if (activeConfirmCallback) {
+            activeConfirmCallback(false);
+            activeConfirmCallback = null;
+        }
+
+        const modal = document.getElementById('confirmModal');
+        if (!modal) {
+            resolve(window.confirm(message));
+            return;
+        }
+
+        const titleEl = document.getElementById('confirm-modal-title');
+        const msgEl = document.getElementById('confirm-modal-message');
+        const confirmBtn = document.getElementById('confirm-modal-confirm-btn');
+        const cancelBtn = document.getElementById('confirm-modal-cancel-btn');
+
+        if (titleEl) titleEl.textContent = title;
+        if (msgEl) msgEl.textContent = message;
+        if (confirmBtn) {
+            confirmBtn.textContent = confirmText;
+            confirmBtn.className = danger ? 'icon-btn btn-danger' : 'icon-btn btn-primary';
+        }
+        if (cancelBtn) cancelBtn.textContent = cancelText;
+
+        function finish(result) {
+            modal.classList.remove('active');
+            confirmBtn.removeEventListener('click', onConfirm);
+            cancelBtn.removeEventListener('click', onCancel);
+            modal.removeEventListener('click', onOverlayClick);
+            document.removeEventListener('keydown', onKeyDown);
+            activeConfirmCallback = null;
+            resolve(result);
+        }
+
+        function onConfirm() {
+            finish(true);
+        }
+
+        function onCancel() {
+            finish(false);
+        }
+
+        function onOverlayClick(e) {
+            if (e.target === modal) {
+                finish(false);
+            }
+        }
+
+        function onKeyDown(e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                finish(false);
+            } else if (e.key === 'Enter' && document.activeElement !== cancelBtn) {
+                e.preventDefault();
+                finish(true);
+            }
+        }
+
+        activeConfirmCallback = finish;
+
+        confirmBtn.addEventListener('click', onConfirm);
+        cancelBtn.addEventListener('click', onCancel);
+        modal.addEventListener('click', onOverlayClick);
+        document.addEventListener('keydown', onKeyDown);
+
+        modal.classList.add('active');
+        setTimeout(() => {
+            if (cancelBtn) cancelBtn.focus();
+        }, 50);
+    });
+}
+window.showConfirmModal = showConfirmModal;
+
 document.addEventListener('DOMContentLoaded', function () {
     marked.setOptions({ breaks: true, gfm: true });
 
@@ -297,7 +384,15 @@ document.addEventListener('DOMContentLoaded', function () {
     // Delete message
     window.deleteMessage = async function (id) {
         if (!window.CURRENT_NOTE) return;
-        if (!confirm('Hapus pesan ini?')) return;
+
+        const confirmed = await window.showConfirmModal({
+            title: 'Hapus Pesan',
+            message: 'Apakah Anda yakin ingin menghapus pesan ini?',
+            confirmText: 'Hapus Pesan',
+            cancelText: 'Batal',
+            danger: true
+        });
+        if (!confirmed) return;
 
         try {
             const res = await fetch(`/notes/${window.CURRENT_NOTE.id}/messages/${id}`, {
@@ -321,7 +416,20 @@ document.addEventListener('DOMContentLoaded', function () {
     // Clear all messages
     window.clearCurrentNoteMessages = async function () {
         if (!window.CURRENT_NOTE || messages.length === 0) return;
-        if (!confirm('Hapus semua pesan di catatan ini?')) return;
+
+        const noteTitle = window.CURRENT_NOTE.title || '';
+        const messageText = noteTitle
+            ? `Apakah Anda yakin ingin menghapus semua pesan di catatan "${noteTitle}"? Riwayat pesan tidak dapat dikembalikan.`
+            : 'Apakah Anda yakin ingin menghapus semua pesan di catatan ini? Riwayat pesan tidak dapat dikembalikan.';
+
+        const confirmed = await window.showConfirmModal({
+            title: 'Hapus Semua Pesan',
+            message: messageText,
+            confirmText: 'Hapus Semua',
+            cancelText: 'Batal',
+            danger: true
+        });
+        if (!confirmed) return;
 
         try {
             const res = await fetch(`/notes/${window.CURRENT_NOTE.id}/clear`, {
@@ -659,7 +767,16 @@ document.addEventListener('DOMContentLoaded', function () {
     // Delete Current Note
     window.deleteCurrentNote = async function () {
         if (!window.CURRENT_NOTE) return;
-        if (!confirm(`Apakah Anda yakin ingin menghapus catatan "${window.CURRENT_NOTE.title}"?`)) return;
+
+        const noteTitle = window.CURRENT_NOTE.title || 'ini';
+        const confirmed = await window.showConfirmModal({
+            title: 'Hapus Catatan',
+            message: `Apakah Anda yakin ingin menghapus catatan "${noteTitle}"? Semua pesan di dalamnya akan dihapus secara permanen.`,
+            confirmText: 'Hapus Catatan',
+            cancelText: 'Batal',
+            danger: true
+        });
+        if (!confirmed) return;
 
         const noteId = window.CURRENT_NOTE.id;
         try {
@@ -712,7 +829,23 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Delete Note from sidebar item
 async function deleteNote(noteId) {
-    if (!confirm('Apakah Anda yakin ingin menghapus catatan ini?')) return;
+    const navItem = document.querySelector(`.tree-note[data-note-id="${noteId}"]`);
+    const noteTitle = navItem?.querySelector('.note-title-text')?.textContent.trim() 
+        || (window.CURRENT_NOTE && window.CURRENT_NOTE.id == noteId ? window.CURRENT_NOTE.title : '');
+
+    const messageText = noteTitle 
+        ? `Apakah Anda yakin ingin menghapus catatan "${noteTitle}"? Semua pesan di dalamnya akan dihapus secara permanen.`
+        : 'Apakah Anda yakin ingin menghapus catatan ini? Semua pesan di dalamnya akan dihapus secara permanen.';
+
+    const confirmed = await window.showConfirmModal({
+        title: 'Hapus Catatan',
+        message: messageText,
+        confirmText: 'Hapus Catatan',
+        cancelText: 'Batal',
+        danger: true
+    });
+    if (!confirmed) return;
+
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     try {
         const res = await fetch(`/notes/${noteId}`, {
@@ -724,7 +857,6 @@ async function deleteNote(noteId) {
         });
         const data = await res.json();
         if (data.success) {
-            const navItem = document.querySelector(`.tree-note[data-note-id="${noteId}"]`);
             if (navItem) navItem.remove();
 
             if (window.CURRENT_NOTE && window.CURRENT_NOTE.id == noteId) {
@@ -743,10 +875,26 @@ async function deleteNote(noteId) {
         console.error('Failed to delete note', e);
     }
 }
+window.deleteNote = deleteNote;
 
 // Delete Folder
 async function deleteFolder(folderId) {
-    if (!confirm('Hapus folder ini dan semua catatan di dalamnya?')) return;
+    const folderGroup = document.querySelector(`.tree-folder-group[data-folder-id="${folderId}"]`);
+    const folderName = folderGroup?.querySelector('.folder-name')?.textContent.trim() || '';
+
+    const messageText = folderName 
+        ? `Apakah Anda yakin ingin menghapus folder "${folderName}" beserta semua subfolder dan catatan di dalamnya? Tindakan ini tidak dapat dibatalkan.`
+        : 'Hapus folder ini dan semua catatan di dalamnya? Tindakan ini tidak dapat dibatalkan.';
+
+    const confirmed = await window.showConfirmModal({
+        title: 'Hapus Folder',
+        message: messageText,
+        confirmText: 'Hapus Folder',
+        cancelText: 'Batal',
+        danger: true
+    });
+    if (!confirmed) return;
+
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     try {
         const res = await fetch(`/folders/${folderId}`, {
@@ -758,7 +906,6 @@ async function deleteFolder(folderId) {
         });
         const data = await res.json();
         if (data.success) {
-            const folderGroup = document.querySelector(`.tree-folder-group[data-folder-id="${folderId}"]`);
             if (folderGroup) folderGroup.remove();
 
             // Also remove from selects
@@ -835,8 +982,31 @@ function openNewNoteModal(folderId = null) {
 }
 
 function closeModal(modalId) {
-    document.getElementById(modalId).classList.remove('active');
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.classList.remove('active');
+        if (modalId === 'confirmModal' && activeConfirmCallback) {
+            activeConfirmCallback(false);
+            activeConfirmCallback = null;
+        }
+    }
 }
+
+// Global modal backdrop click & Escape key listener for standard modals
+document.addEventListener('click', function (e) {
+    if (e.target.classList && e.target.classList.contains('modal-overlay') && e.target.id !== 'confirmModal') {
+        closeModal(e.target.id);
+    }
+});
+
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+        const activeModal = document.querySelector('.modal-overlay.active');
+        if (activeModal && activeModal.id !== 'confirmModal') {
+            closeModal(activeModal.id);
+        }
+    }
+});
 
 // Submit New Folder via SPA (no full reload)
 async function submitNewFolder(e) {

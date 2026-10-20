@@ -213,6 +213,8 @@
     </div>
 </div>
 
+@include('workspace.partials.confirm_modal')
+
 @if ($activeNote)
     <script>
         window.CURRENT_NOTE = @json($activeNote);

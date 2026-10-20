@@ -203,6 +203,24 @@ header {
   transform: translateY(0);
 }
 
+.btn-danger {
+  background: var(--danger);
+  color: #FFFFFF !important;
+  border: 1px solid transparent;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.btn-danger:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 3px 8px rgba(224, 82, 82, 0.35);
+  transform: translateY(-1px);
+}
+
+.btn-danger:active {
+  transform: translateY(0);
+}
+
 /* Main 3-Column Layout */
 main {
   flex: 1;
@@ -999,6 +1017,68 @@ body.is-drag-active .root-dropzone {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+
+/* Confirmation Dialog */
+.confirm-modal {
+  max-width: 440px;
+  padding: 22px 24px;
+  gap: 20px;
+  animation: confirmPopIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes confirmPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.confirm-modal-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.confirm-modal-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid rgba(224, 82, 82, 0.25);
+}
+
+[data-theme="light"] .confirm-modal-icon {
+  border-color: rgba(197, 48, 48, 0.2);
+}
+
+.confirm-modal-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.confirm-modal-text .modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+
+.confirm-modal-message {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin: 0;
+  word-break: break-word;
 }
 
 /* Login Page */
