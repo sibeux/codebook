@@ -155,7 +155,7 @@
                 <span>&bull;</span>
                 <div class="share-meta-item">
                     <span>&#128197;</span>
-                    <span>Diperbarui: {{ $note->updated_at->format('d M Y, H:i') }}</span>
+                    <span>Diperbarui: <time id="note-updated-time" datetime="{{ $note->updated_at->toIso8601String() }}">{{ $note->updated_at->format('d M Y, H:i') }} UTC</time></span>
                 </div>
                 <span>&bull;</span>
                 <div class="share-meta-item">
@@ -378,6 +378,27 @@
             });
         }
 
+        // Format updated_at to visitor's local timezone
+        const updatedTimeEl = document.getElementById('note-updated-time');
+        if (updatedTimeEl && updatedTimeEl.getAttribute('datetime')) {
+            const d = new Date(updatedTimeEl.getAttribute('datetime'));
+            if (!isNaN(d.getTime())) {
+                updatedTimeEl.textContent = d.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' }) + ', ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+        }
+
+        // Helper to format UTC ISO timestamps to visitor's local time
+        function formatUtcToLocalTime(dateStr, fallbackStr) {
+            if (!dateStr) return fallbackStr || '';
+            let parsedStr = dateStr;
+            if (typeof dateStr === 'string' && !dateStr.endsWith('Z') && !dateStr.includes('+')) {
+                parsedStr = dateStr.replace(' ', 'T') + 'Z';
+            }
+            const d = new Date(parsedStr);
+            if (isNaN(d.getTime())) return fallbackStr || '';
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
         // Render messages
         if (thread && Array.isArray(MESSAGES_DATA)) {
             MESSAGES_DATA.forEach(function (m) {
@@ -389,7 +410,7 @@
 
                 const meta = document.createElement('div');
                 meta.className = 'meta';
-                const displayTime = m.sent_time || (m.created_at ? new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '');
+                const displayTime = formatUtcToLocalTime(m.created_at, m.sent_time);
                 meta.innerHTML = '<span class="who">' + (m.sender === 'me' ? 'Me' : 'Other') + '</span><span>' + displayTime + '</span>';
 
                 const bubble = document.createElement('div');

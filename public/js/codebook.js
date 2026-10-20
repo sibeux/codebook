@@ -838,6 +838,18 @@ document.addEventListener('DOMContentLoaded', function () {
         requestAnimationFrame(focusAndPlaceCursor);
     }
 
+    // Format UTC ISO timestamp into viewer's local browser time
+    function formatUtcToLocalTime(dateStr, fallbackStr) {
+        if (!dateStr) return fallbackStr || '';
+        let parsedStr = dateStr;
+        if (typeof dateStr === 'string' && !dateStr.endsWith('Z') && !dateStr.includes('+')) {
+            parsedStr = dateStr.replace(' ', 'T') + 'Z';
+        }
+        const d = new Date(parsedStr);
+        if (isNaN(d.getTime())) return fallbackStr || '';
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
     // Render all messages
     function renderAll() {
         if (!thread) return;
@@ -876,7 +888,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const meta = document.createElement('div');
             meta.className = 'meta';
-            const displayTime = m.sent_time || (m.created_at ? new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '');
+            const displayTime = formatUtcToLocalTime(m.created_at, m.sent_time);
             const isEdited = m.updated_at && m.created_at && (new Date(m.updated_at).getTime() - new Date(m.created_at).getTime() > 1000);
             const editedBadge = isEdited ? '<span class="edited-tag" title="Pesan telah diedit">(diedit)</span>' : '';
             meta.innerHTML = '<span class="who">' + (m.sender === 'me' ? 'Me' : 'Other') + '</span><span>' + displayTime + '</span>' + editedBadge;
