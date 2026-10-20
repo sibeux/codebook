@@ -353,6 +353,130 @@ document.addEventListener('DOMContentLoaded', function () {
         if (btn) btn.innerHTML = collapsed ? '&#8964; tampilkan semua' : '&#8963; sembunyikan';
     }
 
+    // Setup Code Block Copy Buttons & Language Badges
+    function setupCodeBlocks(container) {
+        if (!container) return;
+        container.querySelectorAll('pre').forEach(function (pre) {
+            if (pre.parentElement && pre.parentElement.classList.contains('code-block-wrap')) {
+                return;
+            }
+
+            const code = pre.querySelector('code');
+            if (!code) return;
+
+            // Highlight syntax if not yet processed
+            if (!code.classList.contains('hljs') && window.hljs) {
+                hljs.highlightElement(code);
+            }
+
+            // Extract language (e.g. language-powershell, language-command, language-code, etc.)
+            let langName = '';
+            const langMatch = code.className.match(/\blanguage-([a-zA-Z0-9_-]+)\b/i);
+            if (langMatch && langMatch[1]) {
+                const rawLang = langMatch[1].toLowerCase();
+                if (rawLang !== 'undefined' && rawLang !== 'hljs') {
+                    langName = rawLang;
+                }
+            }
+
+            // Create wrapper
+            const wrapper = document.createElement('div');
+            wrapper.className = 'code-block-wrap' + (langName ? ' has-lang' : '');
+
+            pre.parentNode.insertBefore(wrapper, pre);
+            wrapper.appendChild(pre);
+
+            // Tools container in the corner
+            const tools = document.createElement('div');
+            tools.className = 'code-block-tools';
+
+            if (langName) {
+                const langBadge = document.createElement('span');
+                langBadge.className = 'code-lang-badge';
+                langBadge.textContent = langName;
+                tools.appendChild(langBadge);
+            }
+
+            const copyBtn = document.createElement('button');
+            copyBtn.type = 'button';
+            copyBtn.className = 'code-copy-btn';
+            copyBtn.setAttribute('title', 'Salin kode');
+            copyBtn.setAttribute('aria-label', 'Salin kode');
+            copyBtn.innerHTML = `
+                <svg class="copy-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <svg class="check-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                <span class="copy-btn-text">Salin</span>
+            `;
+
+            copyBtn.addEventListener('click', async function (e) {
+                e.stopPropagation();
+                const textToCopy = (code.innerText || code.textContent || '')
+                    .replace(/\r\n/g, '\n')
+                    .replace(/\n$/, '');
+
+                const copyText = async (text) => {
+                    if (navigator.clipboard && window.isSecureContext) {
+                        try {
+                            await navigator.clipboard.writeText(text);
+                            return true;
+                        } catch (err) {
+                            console.warn('Clipboard API failed, using fallback', err);
+                        }
+                    }
+                    try {
+                        const ta = document.createElement('textarea');
+                        ta.value = text;
+                        ta.style.position = 'fixed';
+                        ta.style.left = '-9999px';
+                        ta.style.top = '-9999px';
+                        ta.setAttribute('readonly', '');
+                        document.body.appendChild(ta);
+                        ta.focus();
+                        ta.select();
+                        const success = document.execCommand('copy');
+                        document.body.removeChild(ta);
+                        return success;
+                    } catch (fallbackErr) {
+                        console.error('Fallback copy failed', fallbackErr);
+                        return false;
+                    }
+                };
+
+                const isSuccess = await copyText(textToCopy);
+                const copyIcon = copyBtn.querySelector('.copy-icon');
+                const checkIcon = copyBtn.querySelector('.check-icon');
+                const btnText = copyBtn.querySelector('.copy-btn-text');
+
+                if (isSuccess !== false) {
+                    copyBtn.classList.add('copied');
+                    if (copyIcon) copyIcon.style.display = 'none';
+                    if (checkIcon) checkIcon.style.display = 'inline-block';
+                    if (btnText) btnText.textContent = 'Tersalin!';
+
+                    setTimeout(function () {
+                        copyBtn.classList.remove('copied');
+                        if (copyIcon) copyIcon.style.display = 'inline-block';
+                        if (checkIcon) checkIcon.style.display = 'none';
+                        if (btnText) btnText.textContent = 'Salin';
+                    }, 2000);
+                } else {
+                    if (btnText) btnText.textContent = 'Gagal!';
+                    setTimeout(function () {
+                        if (btnText) btnText.textContent = 'Salin';
+                    }, 2000);
+                }
+            });
+
+            tools.appendChild(copyBtn);
+            wrapper.appendChild(tools);
+        });
+    }
+
     // Render all messages
     function renderAll() {
         if (!thread) return;
@@ -407,6 +531,7 @@ document.addEventListener('DOMContentLoaded', function () {
             mdDiv.querySelectorAll('pre code').forEach(function (block) {
                 hljs.highlightElement(block);
             });
+            setupCodeBlocks(mdDiv);
 
             const fade = document.createElement('div');
             fade.className = 'fade';

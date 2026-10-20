@@ -205,6 +205,108 @@
   }
   .md pre code{background:none;padding:0;overflow-wrap:normal;white-space:pre;}
   .md pre code.hljs{background:transparent !important;padding:0;}
+
+  /* Code Block Wrapper & Controls */
+  .code-block-wrap{
+    position:relative;
+    margin:0 0 10px;
+  }
+  .code-block-wrap pre{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:11px 13px;
+    padding-right:75px;
+    overflow-x:auto;
+    max-width:100%;
+    margin:0 !important;
+  }
+  .code-block-wrap.has-lang pre{
+    padding-right:140px;
+  }
+  .code-block-tools{
+    position:absolute;
+    top:6px;
+    right:6px;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    z-index:5;
+    user-select:none;
+  }
+  .code-lang-badge{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    letter-spacing:0.02em;
+    color:var(--muted);
+    background:rgba(0,0,0,0.28);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:2px 6px;
+    line-height:1.2;
+    text-transform:lowercase;
+    pointer-events:none;
+  }
+  [data-theme="light"] .code-lang-badge{
+    background:rgba(0,0,0,0.05);
+    border-color:var(--border);
+    color:var(--muted);
+  }
+  .code-copy-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:3px 8px;
+    font-family:inherit;
+    font-size:11px;
+    font-weight:500;
+    line-height:1.3;
+    color:var(--muted);
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:5px;
+    cursor:pointer;
+    transition:all 0.15s ease;
+    box-shadow:0 1px 3px rgba(0,0,0,0.2);
+  }
+  [data-theme="light"] .code-copy-btn{
+    background:#ffffff;
+    border-color:var(--border);
+    box-shadow:0 1px 3px rgba(0,0,0,0.05);
+  }
+  .code-copy-btn:hover{
+    color:var(--text);
+    border-color:var(--border);
+    background:var(--panel-2);
+  }
+  .code-copy-btn:active{
+    transform:scale(0.96);
+  }
+  .code-copy-btn.copied{
+    color:#10B981 !important;
+    border-color:rgba(16,185,129,0.45) !important;
+    background:rgba(16,185,129,0.12) !important;
+  }
+  .code-copy-btn .copy-icon,
+  .code-copy-btn .check-icon{
+    flex-shrink:0;
+  }
+
+  @media (max-width:640px){
+    .code-lang-badge{
+      display:none;
+    }
+    .code-block-wrap pre,
+    .code-block-wrap.has-lang pre{
+      padding-right:48px;
+    }
+    .code-copy-btn .copy-btn-text{
+      display:none;
+    }
+    .code-copy-btn{
+      padding:4px 6px;
+    }
+  }
   .md blockquote{
     margin:0 0 10px;
     padding:2px 12px;
