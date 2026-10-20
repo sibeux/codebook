@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Note;
 use App\Models\NoteMessage;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -38,6 +39,26 @@ class NoteMessageController extends Controller
         ]);
     }
 
+    public function update(Request $request, Note $note, NoteMessage $message): JsonResponse
+    {
+        if ($note->user_id !== Auth::id() || $message->note_id !== $note->id) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'content' => ['required', 'string'],
+            'sender' => ['sometimes', 'in:me,other'],
+        ]);
+
+        $message->update($validated);
+        $note->touch();
+
+        return response()->json([
+            'success' => true,
+            'message' => $message->fresh(),
+        ]);
+    }
+
     public function destroy(Note $note, NoteMessage $message)
     {
         if ($note->user_id !== Auth::id() || $message->note_id !== $note->id) {
@@ -62,4 +83,3 @@ class NoteMessageController extends Controller
         return response()->json(['success' => true]);
     }
 }
-

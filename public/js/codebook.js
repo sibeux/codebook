@@ -585,9 +585,263 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    // Start inline editing for a chat message
+    let activeEditCancel = null;
+
+    function startEditMessage(m, bubble, mdWrap, tools) {
+        if (!window.CURRENT_NOTE) return;
+
+        // If another message is already being edited, cancel it first
+        if (activeEditCancel) {
+            activeEditCancel();
+            activeEditCancel = null;
+        }
+
+        mdWrap.style.display = 'none';
+        tools.style.display = 'none';
+
+        const editBox = document.createElement('div');
+        editBox.className = 'message-edit-box';
+
+        const textarea = document.createElement('textarea');
+        textarea.className = 'message-edit-textarea';
+        textarea.value = m.content || '';
+        textarea.placeholder = 'Tulis pesan markdown di sini...';
+        textarea.setAttribute('autofocus', '');
+        textarea.setAttribute('tabindex', '0');
+
+        const footer = document.createElement('div');
+        footer.className = 'message-edit-footer';
+
+        const hint = document.createElement('span');
+        hint.className = 'message-edit-hint';
+        hint.innerHTML = 'Ctrl+Enter simpan &middot; Esc batal';
+
+        const actions = document.createElement('div');
+        actions.className = 'message-edit-actions';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'icon-btn';
+        cancelBtn.textContent = 'Batal';
+
+        const saveBtn = document.createElement('button');
+        saveBtn.type = 'button';
+        saveBtn.className = 'icon-btn btn-primary';
+        saveBtn.textContent = 'Simpan';
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(saveBtn);
+
+        footer.appendChild(hint);
+        footer.appendChild(actions);
+
+        editBox.appendChild(textarea);
+        editBox.appendChild(footer);
+
+        // Clear any window text selection from click/dblclick
+        if (window.getSelection) {
+            window.getSelection().removeAllRanges();
+        }
+
+        bubble.appendChild(editBox);
+
+        function ensureCursorVisible() {
+            if (!thread || !textarea) return;
+            const taRect = textarea.getBoundingClientRect();
+            const threadRect = thread.getBoundingClientRect();
+
+            // Calculate vertical cursor position
+            const text = textarea.value;
+            const cursorPos = textarea.selectionEnd || 0;
+            const textBeforeCursor = text.substring(0, cursorPos);
+            const totalLines = (text.split('\n').length) || 1;
+            const currentLine = (textBeforeCursor.split('\n').length) || 1;
+            const lineRatio = currentLine / totalLines;
+
+            const estimatedCursorY = taRect.top + (taRect.height * lineRatio);
+
+            if (estimatedCursorY > threadRect.bottom - 60) {
+                const diff = estimatedCursorY - (threadRect.bottom - 60);
+                thread.scrollTop += diff;
+            } else if (estimatedCursorY < threadRect.top + 40) {
+                const diff = (threadRect.top + 40) - estimatedCursorY;
+                thread.scrollTop -= diff;
+            }
+        }
+
+        function adjustEditHeight() {
+            const prevTaScrollTop = textarea.scrollTop;
+            const prevThreadScrollTop = thread ? thread.scrollTop : 0;
+
+            let mirror = document.getElementById('codebook-resize-mirror');
+            if (!mirror) {
+                mirror = document.createElement('textarea');
+                mirror.id = 'codebook-resize-mirror';
+                mirror.setAttribute('aria-hidden', 'true');
+                mirror.setAttribute('tabindex', '-1');
+                mirror.style.position = 'fixed';
+                mirror.style.top = '-9999px';
+                mirror.style.left = '-9999px';
+                mirror.style.visibility = 'hidden';
+                mirror.style.pointerEvents = 'none';
+                mirror.style.zIndex = '-9999';
+                mirror.style.opacity = '0';
+                mirror.style.overflow = 'hidden';
+                mirror.style.resize = 'none';
+                document.body.appendChild(mirror);
+            }
+
+            const computed = window.getComputedStyle(textarea);
+            mirror.style.boxSizing = computed.boxSizing;
+            mirror.style.width = textarea.clientWidth + 'px';
+            mirror.style.fontFamily = computed.fontFamily;
+            mirror.style.fontSize = computed.fontSize;
+            mirror.style.lineHeight = computed.lineHeight;
+            mirror.style.padding = computed.padding;
+            mirror.style.border = computed.border;
+            mirror.style.letterSpacing = computed.letterSpacing;
+            mirror.style.whiteSpace = 'pre-wrap';
+            mirror.style.wordBreak = 'break-word';
+            mirror.value = textarea.value;
+
+            mirror.style.height = '0px';
+            const targetHeight = Math.max(84, mirror.scrollHeight + 4);
+
+            textarea.style.height = targetHeight + 'px';
+
+            if (thread && thread.scrollTop !== prevThreadScrollTop) {
+                thread.scrollTop = prevThreadScrollTop;
+            }
+            if (prevTaScrollTop > 0) {
+                textarea.scrollTop = prevTaScrollTop;
+            }
+        }
+
+        adjustEditHeight();
+        textarea.addEventListener('input', adjustEditHeight);
+        textarea.addEventListener('keyup', function (e) {
+            if (e.key === 'Enter' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                ensureCursorVisible();
+            }
+        });
+
+        function cancelEdit() {
+            if (editBox.parentNode) {
+                editBox.parentNode.removeChild(editBox);
+            }
+            mdWrap.style.display = '';
+            tools.style.display = '';
+            activeEditCancel = null;
+        }
+
+        activeEditCancel = cancelEdit;
+
+        cancelBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            cancelEdit();
+        });
+
+        async function saveEdit() {
+            const newContent = textarea.value.trim();
+            if (!newContent) {
+                alert('Pesan tidak boleh kosong.');
+                textarea.focus();
+                return;
+            }
+
+            if (newContent === (m.content || '').trim()) {
+                cancelEdit();
+                return;
+            }
+
+            saveBtn.disabled = true;
+            cancelBtn.disabled = true;
+            saveBtn.textContent = 'Menyimpan...';
+
+            try {
+                const res = await fetch(`/notes/${window.CURRENT_NOTE.id}/messages/${m.id}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({
+                        content: newContent
+                    })
+                });
+
+                const data = await res.json();
+                if (data.success && data.message) {
+                    m.content = data.message.content;
+                    m.updated_at = data.message.updated_at;
+                    if (data.message.sent_time) {
+                        m.sent_time = data.message.sent_time;
+                    }
+                    activeEditCancel = null;
+                    renderAll();
+                } else {
+                    alert('Gagal menyimpan perubahan pesan.');
+                    saveBtn.disabled = false;
+                    cancelBtn.disabled = false;
+                    saveBtn.textContent = 'Simpan';
+                }
+            } catch (err) {
+                console.error('Error updating message:', err);
+                alert('Gagal menghubungi server untuk menyimpan perubahan.');
+                saveBtn.disabled = false;
+                cancelBtn.disabled = false;
+                saveBtn.textContent = 'Simpan';
+            }
+        }
+
+        saveBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            saveEdit();
+        });
+
+        textarea.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                cancelEdit();
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                saveEdit();
+            }
+        });
+
+        function focusAndPlaceCursor() {
+            if (!textarea || !document.body.contains(textarea)) return;
+
+            textarea.focus({ preventScroll: true });
+
+            // Place cursor at the start (line 1, column 1) so it is always visible
+            try {
+                textarea.setSelectionRange(0, 0);
+            } catch (err) {}
+            textarea.scrollTop = 0;
+
+            // Ensure the top of the edit box (where line 1 and cursor are) is visible in thread
+            if (thread && typeof editBox.scrollIntoView === 'function') {
+                const threadRect = thread.getBoundingClientRect();
+                const editRect = editBox.getBoundingClientRect();
+                if (editRect.top < threadRect.top || editRect.top > threadRect.bottom - 40) {
+                    editBox.scrollIntoView({ behavior: 'auto', block: 'start' });
+                }
+            }
+        }
+
+        focusAndPlaceCursor();
+        requestAnimationFrame(focusAndPlaceCursor);
+    }
+
     // Render all messages
     function renderAll() {
         if (!thread) return;
+        activeEditCancel = null;
         thread.innerHTML = '';
 
         if (!window.CURRENT_NOTE) {
@@ -623,7 +877,9 @@ document.addEventListener('DOMContentLoaded', function () {
             const meta = document.createElement('div');
             meta.className = 'meta';
             const displayTime = m.sent_time || (m.created_at ? new Date(m.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '');
-            meta.innerHTML = '<span class="who">' + (m.sender === 'me' ? 'Me' : 'Other') + '</span><span>' + displayTime + '</span>';
+            const isEdited = m.updated_at && m.created_at && (new Date(m.updated_at).getTime() - new Date(m.created_at).getTime() > 1000);
+            const editedBadge = isEdited ? '<span class="edited-tag" title="Pesan telah diedit">(diedit)</span>' : '';
+            meta.innerHTML = '<span class="who">' + (m.sender === 'me' ? 'Me' : 'Other') + '</span><span>' + displayTime + '</span>' + editedBadge;
 
             const bubble = document.createElement('div');
             bubble.className = 'bubble';
@@ -657,9 +913,15 @@ document.addEventListener('DOMContentLoaded', function () {
             tools.className = 'bubble-tools';
             tools.innerHTML =
                 '<span class="linecount">' + lineCount + ' baris &middot; ' + charCount + ' karakter</span>' +
-                '<div style="display:flex;align-items:center;gap:12px;">' +
+                '<div style="display:flex;align-items:center;gap:8px;">' +
                 '<button class="toggle-btn" id="toggle-' + m.id + '">&#8964; tampilkan semua</button>' +
-                '<button class="del-btn" title="Hapus pesan" data-id="' + m.id + '">&times;</button>' +
+                '<button type="button" class="edit-btn" title="Edit teks pesan" data-id="' + m.id + '" aria-label="Edit pesan">' +
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>' +
+                '<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>' +
+                '</svg>' +
+                '</button>' +
+                '<button type="button" class="del-btn" title="Hapus pesan" data-id="' + m.id + '" aria-label="Hapus pesan">&times;</button>' +
                 '</div>';
 
             bubble.appendChild(tools);
@@ -667,6 +929,28 @@ document.addEventListener('DOMContentLoaded', function () {
             wrap.appendChild(bubble);
             row.appendChild(wrap);
             thread.appendChild(row);
+
+            const editBtn = tools.querySelector('.edit-btn');
+            if (editBtn) {
+                editBtn.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                });
+                editBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    startEditMessage(m, bubble, mdWrap, tools);
+                });
+            }
+
+            bubble.addEventListener('dblclick', function (e) {
+                if (e.target.closest('pre, code, a, button, input, textarea, .code-block-tools, .bubble-tools, .message-edit-box')) {
+                    return;
+                }
+                if (window.getSelection) {
+                    window.getSelection().removeAllRanges();
+                }
+                startEditMessage(m, bubble, mdWrap, tools);
+            });
 
             tools.querySelector('.del-btn').addEventListener('click', function () {
                 window.deleteMessage(m.id);

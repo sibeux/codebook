@@ -343,6 +343,8 @@
     background:var(--panel-2);
     border:1px solid var(--border);
     color:var(--text);
+    caret-color:var(--me);
+    cursor:text;
     font-family:'JetBrains Mono',monospace;
     font-size:11px;
     cursor:pointer;
@@ -363,6 +365,78 @@
     opacity:0.6;
   }
   .del-btn:hover{opacity:1;color:#e2645a;}
+  .edit-btn{
+    background:none;
+    border:none;
+    color:var(--muted);
+    font-size:13px;
+    cursor:pointer;
+    line-height:1;
+    opacity:0.6;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:3px 5px;
+    border-radius:4px;
+    transition:all 0.15s ease;
+  }
+  .edit-btn:hover{opacity:1;color:var(--me);background:var(--panel-2);}
+  .edit-btn svg{display:block;}
+  .edited-tag{
+    font-size:10px;
+    color:var(--muted);
+    margin-left:6px;
+    font-style:italic;
+    font-weight:normal;
+  }
+  .message-edit-box{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    width:100%;
+  }
+  .message-edit-textarea{
+    width:100%;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    color:var(--text);
+    caret-color:var(--me);
+    cursor:text;
+    font-family:'JetBrains Mono',monospace;
+    font-size:var(--chat-font-size);
+    line-height:1.55;
+    padding:10px 12px;
+    border-radius:8px;
+    outline:none;
+    resize:vertical;
+    min-height:80px;
+    box-sizing:border-box;
+    field-sizing:content;
+  }
+  .message-edit-textarea:focus{border-color:var(--me);}
+  .message-edit-footer{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .message-edit-hint{
+    font-size:11px;
+    color:var(--muted);
+    font-family:'JetBrains Mono',monospace;
+  }
+  .message-edit-actions{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-left:auto;
+  }
+  .message-edit-actions button{
+    padding:5px 12px;
+    font-size:12px;
+    border-radius:6px;
+  }
   .linecount{
     font-family:'JetBrains Mono',monospace;
     font-size:10.5px;

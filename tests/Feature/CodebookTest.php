@@ -83,6 +83,18 @@ class CodebookTest extends TestCase
 
         $messageId = $response->json('message.id');
 
+        // Update message
+        $updateResponse = $this->actingAs($user)->putJson("/notes/{$note->id}/messages/{$messageId}", [
+            'content' => '## Updated Markdown Content',
+        ]);
+        $updateResponse->assertStatus(200);
+        $updateResponse->assertJsonPath('success', true);
+        $updateResponse->assertJsonPath('message.content', '## Updated Markdown Content');
+        $this->assertDatabaseHas('note_messages', [
+            'id' => $messageId,
+            'content' => '## Updated Markdown Content',
+        ]);
+
         // Delete message
         $deleteResponse = $this->actingAs($user)->deleteJson("/notes/{$note->id}/messages/{$messageId}");
         $deleteResponse->assertStatus(200);
@@ -90,5 +102,44 @@ class CodebookTest extends TestCase
             'id' => $messageId,
         ]);
     }
-}
 
+    public function test_user_cannot_update_message_of_another_user(): void
+    {
+        $user1 = User::create([
+            'email' => 'user1@sibeux.my.id',
+            'name' => 'User One',
+            'password' => bcrypt('password'),
+            'role' => 'user',
+        ]);
+
+        $user2 = User::create([
+            'email' => 'user2@sibeux.my.id',
+            'name' => 'User Two',
+            'password' => bcrypt('password'),
+            'role' => 'user',
+        ]);
+
+        $note = Note::create([
+            'user_id' => $user1->user_id,
+            'title' => 'User 1 Note',
+            'mode' => 'markdown',
+        ]);
+
+        $message = $note->messages()->create([
+            'sender' => 'me',
+            'content' => 'Original Content',
+            'sent_time' => '10:00',
+            'order_index' => 1,
+        ]);
+
+        $response = $this->actingAs($user2)->putJson("/notes/{$note->id}/messages/{$message->id}", [
+            'content' => 'Malicious Update',
+        ]);
+
+        $response->assertStatus(403);
+        $this->assertDatabaseHas('note_messages', [
+            'id' => $message->id,
+            'content' => 'Original Content',
+        ]);
+    }
+}

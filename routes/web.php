@@ -32,6 +32,7 @@ Route::middleware('auth')->group(function () {
 
     // Note Messages (Markdown Chat Mode)
     Route::post('/notes/{note}/messages', [NoteMessageController::class, 'store'])->name('notes.messages.store');
+    Route::put('/notes/{note}/messages/{message}', [NoteMessageController::class, 'update'])->name('notes.messages.update');
     Route::delete('/notes/{note}/messages/{message}', [NoteMessageController::class, 'destroy'])->name('notes.messages.destroy');
     Route::post('/notes/{note}/clear', [NoteMessageController::class, 'clear'])->name('notes.messages.clear');
 });
