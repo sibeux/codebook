@@ -1,16 +1,32 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
-    # Cegah loop jika request sudah mengarah ke public/
+    # 1. Blokir akses langsung ke folder sistem Laravel
+    RewriteRule ^(app|bootstrap|config|database|resources|routes|storage|tests|vendor)($|/) - [F,L]
+
+    # 2. Arahkan semua request publik ke folder public/ secara transparan
     RewriteCond %{REQUEST_URI} !^/public/
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
 
-# Blokir akses langsung ke file konfigurasi & sensitif
-<FilesMatch "^\.env|composer\.(json|lock)|package(-lock)?\.json|artisan|phpunit\.xml">
-    Order allow,deny
-    Deny from all
+# 3. Blokir total akses ke file yang diawali titik (.env, .git, dll)
+<FilesMatch "^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
 </FilesMatch>
 
-# Blokir akses ke folder internal dan vendor secara langsung
-RedirectMatch 404 ^/(app|bootstrap|config|database|resources|routes|vendor)/.*$
+# 4. Blokir file konfigurasi penting lainnya
+<FilesMatch "(composer\.(json|lock)|package(-lock)?\.json|artisan|phpunit\.xml)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order allow,deny
+        Deny from all
+    </IfModule>
+</FilesMatch>
