@@ -29,6 +29,10 @@
             if (localStorage.getItem('codebook_sidebar_collapsed') === 'true') {
                 document.documentElement.classList.add('sidebar-collapsed');
             }
+            const savedFontSize = localStorage.getItem('codebook_font_size');
+            if (savedFontSize) {
+                document.documentElement.style.setProperty('--chat-font-size', savedFontSize + 'px');
+            }
         })();
     </script>
     @yield('styles')

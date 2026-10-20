@@ -15,6 +15,7 @@ class NoteController extends Controller
             'title' => ['nullable', 'string', 'max:255'],
             'folder_id' => ['nullable', 'exists:folders,id'],
             'mode' => ['nullable', 'in:markdown,plaintext'],
+            'is_public' => ['nullable', 'boolean'],
         ]);
 
         $note = Note::create([
@@ -22,6 +23,7 @@ class NoteController extends Controller
             'folder_id' => $validated['folder_id'] ?? null,
             'title' => $validated['title'] ?? 'Untitled Note',
             'mode' => $validated['mode'] ?? 'markdown',
+            'is_public' => (bool) ($validated['is_public'] ?? false),
         ]);
 
         if ($request->wantsJson()) {
@@ -57,6 +59,7 @@ class NoteController extends Controller
             'folder_id' => ['nullable', 'exists:folders,id'],
             'mode' => ['sometimes', 'in:markdown,plaintext'],
             'is_pinned' => ['sometimes', 'boolean'],
+            'is_public' => ['sometimes', 'boolean'],
         ]);
 
         if (array_key_exists('folder_id', $validated) && $validated['folder_id'] !== null) {

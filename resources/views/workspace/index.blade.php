@@ -79,6 +79,7 @@
                             <div class="tree-label">
                                 <span class="tree-icon">&#128221;</span>
                                 <span class="note-title-text">{{ $note->title }}</span>
+                                <span class="note-public-icon" id="tree-note-public-{{ $note->id }}" title="Catatan Publik" style="{{ $note->is_public ? 'font-size:10px;margin-left:4px;opacity:0.8;' : 'display:none;font-size:10px;margin-left:4px;opacity:0.8;' }}">&#127760;</span>
                             </div>
                             <div class="item-actions" onclick="event.preventDefault(); event.stopPropagation()">
                                 <button class="mini-btn danger" title="Hapus Catatan" onclick="deleteNote({{ $note->id }})">&times;</button>
@@ -150,7 +151,20 @@
         </div>
 
         <div class="panel-block" style="flex-direction:row;gap:8px;">
-            <button class="icon-btn" id="clear-btn" style="flex:1;justify-content:center;" onclick="clearCurrentNoteMessages()">Clear chat</button>
+            <button class="icon-btn" id="share-note-btn" style="flex:1;justify-content:center;gap:6px;" onclick="openShareModal()" title="Bagikan Catatan">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="18" cy="5" r="3"></circle>
+                    <circle cx="6" cy="12" r="3"></circle>
+                    <circle cx="18" cy="19" r="3"></circle>
+                    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+                <span>Bagikan</span>
+                <span id="active-note-visibility-badge" style="font-size:10px;padding:1px 6px;border-radius:10px;background:{{ ($activeNote && $activeNote->is_public) ? 'rgba(34,197,94,0.18)' : 'var(--panel-2)' }};color:{{ ($activeNote && $activeNote->is_public) ? '#22c55e' : 'var(--muted)' }};border:1px solid {{ ($activeNote && $activeNote->is_public) ? 'rgba(34,197,94,0.3)' : 'var(--border)' }};">
+                    {{ ($activeNote && $activeNote->is_public) ? 'Publik' : 'Pribadi' }}
+                </span>
+            </button>
+            <button class="icon-btn" id="clear-btn" style="justify-content:center;" onclick="clearCurrentNoteMessages()">Clear chat</button>
             <button class="icon-btn" style="color:var(--danger);justify-content:center;" onclick="deleteCurrentNote()" title="Hapus Catatan">&#128465;</button>
         </div>
     </div>
@@ -195,6 +209,13 @@
                 <input type="text" id="note-title-modal-input" class="modal-input" required maxlength="255" placeholder="Contoh: Diskusi Fitur Chat, Snippet Auth...">
             </div>
             <div class="form-group" style="margin-bottom:12px;">
+                <label style="font-size:11px;color:var(--muted);text-transform:uppercase;">Visibilitas</label>
+                <select id="note-is-public-select" class="modal-input" style="background:var(--panel-2);">
+                    <option value="0">&#128274; Pribadi (Hanya Anda yang dapat melihat)</option>
+                    <option value="1">&#127760; Publik (Dapat dilihat siapa saja dengan tautan)</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:12px;">
                 <label style="font-size:11px;color:var(--muted);text-transform:uppercase;">Folder (Opsional)</label>
                 <select id="note-folder-select" class="modal-input" style="background:var(--panel-2);">
                     <option value="">-- Tanpa Folder (Catatan Utama) --</option>
@@ -213,6 +234,7 @@
     </div>
 </div>
 
+@include('workspace.partials.share_modal')
 @include('workspace.partials.confirm_modal')
 
 @if ($activeNote)

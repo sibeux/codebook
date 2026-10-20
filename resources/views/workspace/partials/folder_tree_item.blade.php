@@ -30,6 +30,7 @@
                 <div class="tree-label">
                     <span class="tree-icon">&#128221;</span>
                     <span class="note-title-text">{{ $note->title }}</span>
+                    <span class="note-public-icon" id="tree-note-public-{{ $note->id }}" title="Catatan Publik" style="{{ $note->is_public ? 'font-size:10px;margin-left:4px;opacity:0.8;' : 'display:none;font-size:10px;margin-left:4px;opacity:0.8;' }}">&#127760;</span>
                 </div>
                 <div class="item-actions" onclick="event.preventDefault(); event.stopPropagation()">
                     <button class="mini-btn danger" title="Hapus Catatan" onclick="deleteNote({{ $note->id }})">&times;</button>

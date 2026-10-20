@@ -993,6 +993,10 @@ document.addEventListener('DOMContentLoaded', function () {
                 window.CURRENT_NOTE = data.note;
                 messages = data.note.messages || [];
 
+                if (window.updateActiveNoteVisibilityUI) {
+                    window.updateActiveNoteVisibilityUI(data.note);
+                }
+
                 if (noteTitleInput) {
                     noteTitleInput.value = data.note.title;
                     originalNoteTitle = data.note.title;
@@ -1102,6 +1106,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Initial render on page load
     if (window.CURRENT_NOTE) {
+        if (window.updateActiveNoteVisibilityUI) {
+            window.updateActiveNoteVisibilityUI(window.CURRENT_NOTE);
+        }
         renderAll();
         setTimeout(function () {
             thread.scrollTop = thread.scrollHeight;
@@ -1391,6 +1398,7 @@ async function submitNewNote(e) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     const title = document.getElementById('note-title-modal-input').value;
     const folderId = document.getElementById('note-folder-select').value;
+    const isPublic = document.getElementById('note-is-public-select')?.value === '1';
 
     try {
         const res = await fetch('/notes', {
@@ -1400,7 +1408,7 @@ async function submitNewNote(e) {
                 'Accept': 'application/json',
                 'X-CSRF-TOKEN': csrfToken
             },
-            body: JSON.stringify({ title, folder_id: folderId || null, mode: 'markdown' })
+            body: JSON.stringify({ title, folder_id: folderId || null, mode: 'markdown', is_public: isPublic })
         });
         const data = await res.json();
         if (data.success && data.note) {
@@ -1419,6 +1427,7 @@ async function submitNewNote(e) {
                     <div class="tree-label">
                         <span class="tree-icon">&#128221;</span>
                         <span class="note-title-text">${data.note.title}</span>
+                        <span class="note-public-icon" id="tree-note-public-${data.note.id}" title="Catatan Publik" style="${data.note.is_public ? 'font-size:10px;margin-left:4px;opacity:0.8;' : 'display:none;font-size:10px;margin-left:4px;opacity:0.8;'}">&#127760;</span>
                     </div>
                     <div class="item-actions" onclick="event.preventDefault(); event.stopPropagation()">
                         <button class="mini-btn danger" title="Hapus Catatan" onclick="deleteNote(${data.note.id})">&times;</button>
@@ -1445,6 +1454,203 @@ async function submitNewNote(e) {
         alert('Gagal membuat catatan.');
     }
 }
+
+// -----------------------------------------------------------------------------
+// Share Note Modal & Actions
+// -----------------------------------------------------------------------------
+function updateActiveNoteVisibilityUI(note) {
+    if (!note) return;
+    const badge = document.getElementById('active-note-visibility-badge');
+    if (badge) {
+        if (note.is_public) {
+            badge.textContent = 'Publik';
+            badge.style.background = 'rgba(34,197,94,0.18)';
+            badge.style.color = '#22c55e';
+            badge.style.borderColor = 'rgba(34,197,94,0.3)';
+        } else {
+            badge.textContent = 'Pribadi';
+            badge.style.background = 'var(--panel-2)';
+            badge.style.color = 'var(--muted)';
+            badge.style.borderColor = 'var(--border)';
+        }
+    }
+
+    // Update tree item indicator
+    const treeIcon = document.getElementById(`tree-note-public-${note.id}`);
+    if (treeIcon) {
+        treeIcon.style.display = note.is_public ? 'inline' : 'none';
+    }
+}
+window.updateActiveNoteVisibilityUI = updateActiveNoteVisibilityUI;
+
+function updateShareModalVisibilityUI(isPublic) {
+    const privBtn = document.getElementById('share-visibility-private');
+    const pubBtn = document.getElementById('share-visibility-public');
+    const desc = document.getElementById('share-visibility-desc');
+
+    if (isPublic) {
+        if (pubBtn) {
+            pubBtn.style.background = 'rgba(34,197,94,0.15)';
+            pubBtn.style.color = '#22c55e';
+            pubBtn.style.borderColor = 'rgba(34,197,94,0.35)';
+            pubBtn.style.fontWeight = '600';
+        }
+        if (privBtn) {
+            privBtn.style.background = 'var(--panel-2)';
+            privBtn.style.color = 'var(--muted)';
+            privBtn.style.borderColor = 'var(--border)';
+            privBtn.style.fontWeight = 'normal';
+        }
+        if (desc) {
+            desc.innerHTML = '<strong style="color:#22c55e;">&#127760; Publik:</strong> Siapa saja yang memiliki tautan ini dapat melihat seluruh catatan dan pesan tanpa perlu login.';
+        }
+    } else {
+        if (privBtn) {
+            privBtn.style.background = 'rgba(234,179,8,0.15)';
+            privBtn.style.color = '#eab308';
+            privBtn.style.borderColor = 'rgba(234,179,8,0.35)';
+            privBtn.style.fontWeight = '600';
+        }
+        if (pubBtn) {
+            pubBtn.style.background = 'var(--panel-2)';
+            pubBtn.style.color = 'var(--muted)';
+            pubBtn.style.borderColor = 'var(--border)';
+            pubBtn.style.fontWeight = 'normal';
+        }
+        if (desc) {
+            desc.innerHTML = '<strong style="color:#eab308;">&#128274; Pribadi:</strong> Hanya Anda yang dapat melihat catatan ini. Pengguna lain tanpa login atau akun lain tidak dapat melihatnya.';
+        }
+    }
+}
+
+window.openShareModal = function () {
+    if (!window.CURRENT_NOTE) return;
+    const note = window.CURRENT_NOTE;
+
+    const titleEl = document.getElementById('share-modal-note-title');
+    if (titleEl) titleEl.textContent = `Catatan: "${note.title}"`;
+
+    const shareUrl = note.share_url || (window.location.origin + '/share/' + (note.share_token || ''));
+    const input = document.getElementById('share-url-input');
+    if (input) input.value = shareUrl;
+
+    const openLink = document.getElementById('open-share-link');
+    if (openLink) openLink.href = shareUrl;
+
+    updateShareModalVisibilityUI(note.is_public);
+
+    const modal = document.getElementById('shareModal');
+    if (modal) modal.classList.add('active');
+};
+
+window.setNoteVisibility = async function (isPublic) {
+    if (!window.CURRENT_NOTE) return;
+    const noteId = window.CURRENT_NOTE.id;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    updateShareModalVisibilityUI(isPublic);
+
+    try {
+        const res = await fetch(`/notes/${noteId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ is_public: isPublic })
+        });
+        const data = await res.json();
+        if (data.success && data.note) {
+            window.CURRENT_NOTE.is_public = Boolean(isPublic);
+            updateActiveNoteVisibilityUI(window.CURRENT_NOTE);
+        } else {
+            updateShareModalVisibilityUI(window.CURRENT_NOTE.is_public);
+            alert('Gagal mengubah visibilitas catatan.');
+        }
+    } catch (err) {
+        updateShareModalVisibilityUI(window.CURRENT_NOTE.is_public);
+        alert('Gagal mengubah visibilitas catatan.');
+    }
+};
+
+window.copyShareUrl = function () {
+    const input = document.getElementById('share-url-input');
+    if (!input || !input.value) return;
+
+    const copyBtnText = document.getElementById('copy-btn-text');
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).then(showDone).catch(fallback);
+    } else {
+        fallback();
+    }
+
+    function fallback() {
+        input.select();
+        try {
+            document.execCommand('copy');
+            showDone();
+        } catch (e) {
+            alert('Silakan salin tautan secara manual: ' + input.value);
+        }
+    }
+
+    function showDone() {
+        if (copyBtnText) copyBtnText.textContent = '✓ Tersalin!';
+        setTimeout(() => {
+            if (copyBtnText) copyBtnText.textContent = 'Salin Tautan';
+        }, 2000);
+    }
+};
+
+window.regenerateShareLink = async function () {
+    if (!window.CURRENT_NOTE) return;
+    const noteId = window.CURRENT_NOTE.id;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+
+    const confirmed = await window.showConfirmModal({
+        title: 'Buat Ulang Tautan Share',
+        message: 'Tautan lama akan langsung tidak berlaku dan diganti dengan tautan baru yang acak. Apakah Anda yakin?',
+        confirmText: 'Buat Ulang',
+        cancelText: 'Batal',
+        danger: false
+    });
+
+    if (!confirmed) return;
+
+    try {
+        const res = await fetch(`/notes/${noteId}/share-token`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            }
+        });
+        const data = await res.json();
+        if (data.success && data.share_url) {
+            window.CURRENT_NOTE.share_token = data.share_token;
+            window.CURRENT_NOTE.share_url = data.share_url;
+
+            const input = document.getElementById('share-url-input');
+            if (input) input.value = data.share_url;
+
+            const openLink = document.getElementById('open-share-link');
+            if (openLink) openLink.href = data.share_url;
+
+            const copyBtnText = document.getElementById('copy-btn-text');
+            if (copyBtnText) {
+                copyBtnText.textContent = '✓ Tautan Baru Dibuat!';
+                setTimeout(() => {
+                    copyBtnText.textContent = 'Salin Tautan';
+                }, 2000);
+            }
+        }
+    } catch (err) {
+        alert('Gagal membuat ulang tautan share.');
+    }
+};
 
 // -----------------------------------------------------------------------------
 // Drag & Drop Functionality for Sidebar Tree
