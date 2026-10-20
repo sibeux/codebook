@@ -16,9 +16,39 @@ class FolderController extends Controller
             'icon' => ['nullable', 'string', 'max:50'],
         ]);
 
+        $parentId = $validated['parent_id'] ?? null;
+
+        if ($parentId !== null) {
+            $parent = Folder::where('id', $parentId)
+                ->where('user_id', Auth::id())
+                ->first();
+
+            if (! $parent) {
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Folder induk tidak ditemukan.',
+                    ], 422);
+                }
+
+                return back()->withErrors(['parent_id' => 'Folder induk tidak ditemukan.']);
+            }
+
+            if ($parent->getDepth() >= Folder::MAX_DEPTH) {
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Maksimal kedalaman folder adalah '.Folder::MAX_DEPTH.' level.',
+                    ], 422);
+                }
+
+                return back()->withErrors(['parent_id' => 'Maksimal kedalaman folder adalah '.Folder::MAX_DEPTH.' level.']);
+            }
+        }
+
         $folder = Folder::create([
             'user_id' => Auth::id(),
-            'parent_id' => $validated['parent_id'] ?? null,
+            'parent_id' => $parentId,
             'name' => $validated['name'],
             'icon' => $validated['icon'] ?? 'folder',
         ]);
@@ -27,6 +57,7 @@ class FolderController extends Controller
             return response()->json([
                 'success' => true,
                 'folder' => $folder,
+                'depth' => $folder->getDepth(),
             ]);
         }
 
@@ -80,6 +111,19 @@ class FolderController extends Controller
                 }
                 $curr = $curr->parent;
             }
+
+            // Check maximum depth limit (10 levels)
+            $newMaxDepth = $targetParent->getDepth() + $folder->getSubtreeHeight();
+            if ($newMaxDepth > Folder::MAX_DEPTH) {
+                if ($request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Maksimal kedalaman folder adalah '.Folder::MAX_DEPTH.' level.',
+                    ], 422);
+                }
+
+                return back()->withErrors(['parent_id' => 'Maksimal kedalaman folder adalah '.Folder::MAX_DEPTH.' level.']);
+            }
         }
 
         $folder->update($validated);
@@ -88,6 +132,7 @@ class FolderController extends Controller
             return response()->json([
                 'success' => true,
                 'folder' => $folder,
+                'depth' => $folder->getDepth(),
             ]);
         }
 

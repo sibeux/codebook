@@ -60,7 +60,7 @@
             {{-- Folders --}}
             <div class="folders-container" id="folders-container">
                 @foreach ($folders as $folder)
-                    @include('workspace.partials.folder_tree_item', ['folder' => $folder, 'activeNote' => $activeNote])
+                    @include('workspace.partials.folder_tree_item', ['folder' => $folder, 'activeNote' => $activeNote, 'depth' => 1])
                 @endforeach
             </div>
 
@@ -119,7 +119,11 @@
     <div id="composer" style="{{ $activeNote ? 'display:flex;' : 'display:none;' }}">
         <div class="panel-block">
             <div class="panel-label">Judul Catatan</div>
-            <input type="text" id="note-title-input" class="note-title-input" value="{{ $activeNote ? $activeNote->title : '' }}" placeholder="Nama Catatan..." oninput="onNoteTitleInput(this.value)">
+            <textarea id="note-title-input" class="note-title-input" rows="1" maxlength="255" placeholder="Nama Catatan..." title="Enter untuk simpan &middot; Esc untuk batal" oninput="onNoteTitleInput(this.value)">{{ $activeNote ? $activeNote->title : '' }}</textarea>
+            <div class="title-edit-hint" style="font-size:11px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;padding:0 2px;">
+                <span>Enter simpan &middot; Esc batal</span>
+                <span id="title-char-count" style="font-variant-numeric: tabular-nums;">{{ $activeNote ? mb_strlen($activeNote->title) : 0 }}/255</span>
+            </div>
         </div>
 
         <div class="panel-block">
@@ -155,9 +159,20 @@
 <!-- Modal: New Folder -->
 <div class="modal-overlay" id="newFolderModal">
     <div class="modal">
-        <h3 class="modal-title">Folder Baru</h3>
+        <h3 class="modal-title" id="folder-modal-title">Folder Baru</h3>
         <form id="newFolderForm" onsubmit="submitNewFolder(event)">
             <input type="hidden" id="folder-parent-id" name="parent_id" value="">
+            <div class="form-group" style="margin-bottom:12px;">
+                <label style="font-size:11px;color:var(--muted);text-transform:uppercase;">Lokasi / Folder Induk</label>
+                <select id="folder-parent-select" class="modal-input" style="background:var(--panel-2);" onchange="document.getElementById('folder-parent-id').value = this.value">
+                    <option value="">-- Tingkat Utama (Root) --</option>
+                    @foreach ($flatFolderTree as $f)
+                        <option value="{{ $f->id }}" {{ $f->depth >= 10 ? 'disabled' : '' }} data-depth="{{ $f->depth }}">
+                            {!! str_repeat('&nbsp;&nbsp;&nbsp;', $f->depth - 1) !!}{{ $f->depth > 1 ? '└─ ' : '' }}{{ $f->name }}{{ $f->depth >= 10 ? ' (Maksimal level 10)' : '' }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
             <div class="form-group" style="margin-bottom:12px;">
                 <label style="font-size:11px;color:var(--muted);text-transform:uppercase;">Nama Folder</label>
                 <input type="text" id="folder-name-input" class="modal-input" required placeholder="Contoh: Projek Laravel, Dokumentasi API...">
@@ -177,17 +192,16 @@
         <form id="newNoteForm" onsubmit="submitNewNote(event)">
             <div class="form-group" style="margin-bottom:12px;">
                 <label style="font-size:11px;color:var(--muted);text-transform:uppercase;">Judul Catatan</label>
-                <input type="text" id="note-title-modal-input" class="modal-input" required placeholder="Contoh: Diskusi Fitur Chat, Snippet Auth...">
+                <input type="text" id="note-title-modal-input" class="modal-input" required maxlength="255" placeholder="Contoh: Diskusi Fitur Chat, Snippet Auth...">
             </div>
             <div class="form-group" style="margin-bottom:12px;">
                 <label style="font-size:11px;color:var(--muted);text-transform:uppercase;">Folder (Opsional)</label>
                 <select id="note-folder-select" class="modal-input" style="background:var(--panel-2);">
                     <option value="">-- Tanpa Folder (Catatan Utama) --</option>
-                    @foreach ($folders as $f)
-                        <option value="{{ $f->id }}">{{ $f->name }}</option>
-                        @foreach ($f->children as $sub)
-                            <option value="{{ $sub->id }}">&nbsp;&nbsp;&bull; {{ $sub->name }}</option>
-                        @endforeach
+                    @foreach ($flatFolderTree as $f)
+                        <option value="{{ $f->id }}">
+                            {!! str_repeat('&nbsp;&nbsp;&nbsp;', $f->depth - 1) !!}{{ $f->depth > 1 ? '└─ ' : '' }}{{ $f->name }}
+                        </option>
                     @endforeach
                 </select>
             </div>

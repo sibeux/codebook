@@ -20,6 +20,98 @@ document.addEventListener('DOMContentLoaded', function () {
     let currentSender = 'me';
     let messages = window.INITIAL_MESSAGES || [];
     let titleDebounceTimeout = null;
+    let originalNoteTitle = noteTitleInput ? noteTitleInput.value : '';
+
+    function autoResizeNoteTitle() {
+        if (!noteTitleInput) return;
+        noteTitleInput.style.height = 'auto';
+        noteTitleInput.style.height = noteTitleInput.scrollHeight + 'px';
+    }
+
+    function updateTitleCharCount(len) {
+        const countEl = document.getElementById('title-char-count');
+        if (countEl) {
+            countEl.textContent = `${len}/255`;
+        }
+    }
+
+    async function persistNoteTitle(noteId, titleToSave) {
+        try {
+            await fetch(`/notes/${noteId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({ title: titleToSave })
+            });
+        } catch (e) {
+            console.error('Failed to auto-save note title', e);
+        }
+    }
+
+    if (noteTitleInput) {
+        autoResizeNoteTitle();
+        updateTitleCharCount(noteTitleInput.value.length);
+
+        // Track original title on focus to allow revert on Escape
+        noteTitleInput.addEventListener('focus', function () {
+            originalNoteTitle = noteTitleInput.value;
+        });
+
+        // Keydown handling: Enter commits, Escape cancels and reverts
+        noteTitleInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                clearTimeout(titleDebounceTimeout);
+
+                // Revert to original title
+                noteTitleInput.value = originalNoteTitle;
+                autoResizeNoteTitle();
+                updateTitleCharCount(originalNoteTitle.length);
+
+                if (window.CURRENT_NOTE) {
+                    window.CURRENT_NOTE.title = originalNoteTitle;
+                    const activeNav = document.querySelector(`.tree-note[data-note-id="${window.CURRENT_NOTE.id}"] .note-title-text`);
+                    if (activeNav) activeNav.textContent = originalNoteTitle;
+                    document.title = `Codebook - ${originalNoteTitle}`;
+                    // Ensure backend has the reverted title
+                    persistNoteTitle(window.CURRENT_NOTE.id, originalNoteTitle);
+                }
+                noteTitleInput.blur();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                noteTitleInput.blur();
+            }
+        });
+
+        // Blur event: validate empty text and commit changes safely
+        noteTitleInput.addEventListener('blur', function () {
+            clearTimeout(titleDebounceTimeout);
+            if (!window.CURRENT_NOTE) return;
+
+            let trimmed = noteTitleInput.value.trim();
+            // Safety guard: prevent accidental empty title
+            if (!trimmed) {
+                trimmed = originalNoteTitle.trim() || 'Untitled Note';
+                noteTitleInput.value = trimmed;
+                autoResizeNoteTitle();
+            }
+
+            updateTitleCharCount(trimmed.length);
+            window.CURRENT_NOTE.title = trimmed;
+            document.title = `Codebook - ${trimmed}`;
+            const activeNav = document.querySelector(`.tree-note[data-note-id="${window.CURRENT_NOTE.id}"] .note-title-text`);
+            if (activeNav) activeNav.textContent = trimmed;
+
+            // Save if changed from original
+            if (trimmed !== originalNoteTitle) {
+                originalNoteTitle = trimmed;
+                persistNoteTitle(window.CURRENT_NOTE.id, trimmed);
+            }
+        });
+    }
 
     // Sender toggle
     senderButtons.forEach(function (btn) {
@@ -386,6 +478,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 if (noteTitleInput) {
                     noteTitleInput.value = data.note.title;
+                    originalNoteTitle = data.note.title;
+                    autoResizeNoteTitle();
+                    updateTitleCharCount(data.note.title.length);
                 }
 
                 // Update URL cleanly without reloading
@@ -415,29 +510,25 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Debounced Note Title Editing
     window.onNoteTitleInput = function (newTitle) {
+        autoResizeNoteTitle();
+        updateTitleCharCount(newTitle.length);
         if (!window.CURRENT_NOTE) return;
-        window.CURRENT_NOTE.title = newTitle;
 
         // Update title in sidebar immediately
         const activeNav = document.querySelector(`.tree-note[data-note-id="${window.CURRENT_NOTE.id}"] .note-title-text`);
-        if (activeNav) activeNav.textContent = newTitle;
+        if (activeNav) {
+            activeNav.textContent = newTitle.trim() || originalNoteTitle || 'Untitled Note';
+        }
 
         clearTimeout(titleDebounceTimeout);
         titleDebounceTimeout = setTimeout(async () => {
-            try {
-                await fetch(`/notes/${window.CURRENT_NOTE.id}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'X-CSRF-TOKEN': csrfToken
-                    },
-                    body: JSON.stringify({ title: newTitle })
-                });
-            } catch (e) {
-                console.error('Failed to auto-save note title', e);
+            const trimmed = noteTitleInput ? noteTitleInput.value.trim() : newTitle.trim();
+            if (trimmed && trimmed !== originalNoteTitle) {
+                originalNoteTitle = trimmed;
+                window.CURRENT_NOTE.title = trimmed;
+                await persistNoteTitle(window.CURRENT_NOTE.id, trimmed);
             }
-        }, 500);
+        }, 1000);
     };
 
     // Delete Current Note
@@ -468,6 +559,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 } else {
                     window.CURRENT_NOTE = null;
                     messages = [];
+                    if (noteTitleInput) {
+                        noteTitleInput.value = '';
+                        originalNoteTitle = '';
+                        autoResizeNoteTitle();
+                        updateTitleCharCount(0);
+                    }
                     window.history.pushState({}, '', '/');
                     renderAll();
                 }
@@ -539,6 +636,12 @@ async function deleteFolder(folderId) {
             const folderGroup = document.querySelector(`.tree-folder-group[data-folder-id="${folderId}"]`);
             if (folderGroup) folderGroup.remove();
 
+            // Also remove from selects
+            const opt1 = document.querySelector(`#folder-parent-select option[value="${folderId}"]`);
+            if (opt1) opt1.remove();
+            const opt2 = document.querySelector(`#note-folder-select option[value="${folderId}"]`);
+            if (opt2) opt2.remove();
+
             // If active note was in this folder, reload or select next available
             const activeNoteInDom = document.querySelector(`.tree-note.active`);
             if (!activeNoteInDom) {
@@ -580,7 +683,17 @@ function filterTree(query) {
 
 // Modals
 function openNewFolderModal(parentId = null) {
-    document.getElementById('folder-parent-id').value = parentId || '';
+    const parentInput = document.getElementById('folder-parent-id');
+    const parentSelect = document.getElementById('folder-parent-select');
+    const modalTitle = document.getElementById('folder-modal-title');
+
+    if (parentInput) parentInput.value = parentId ? String(parentId) : '';
+    if (parentSelect) parentSelect.value = parentId ? String(parentId) : '';
+
+    if (modalTitle) {
+        modalTitle.textContent = parentId ? 'Subfolder Baru' : 'Folder Baru';
+    }
+
     document.getElementById('folder-name-input').value = '';
     document.getElementById('newFolderModal').classList.add('active');
     setTimeout(() => document.getElementById('folder-name-input').focus(), 50);
@@ -605,7 +718,9 @@ async function submitNewFolder(e) {
     e.preventDefault();
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     const name = document.getElementById('folder-name-input').value;
-    const parentId = document.getElementById('folder-parent-id').value;
+    const parentSelect = document.getElementById('folder-parent-select');
+    const parentInput = document.getElementById('folder-parent-id');
+    const parentId = (parentSelect ? parentSelect.value : (parentInput ? parentInput.value : '')) || null;
 
     try {
         const res = await fetch('/folders', {
@@ -615,24 +730,27 @@ async function submitNewFolder(e) {
                 'Accept': 'application/json',
                 'X-CSRF-TOKEN': csrfToken
             },
-            body: JSON.stringify({ name, parent_id: parentId || null })
+            body: JSON.stringify({ name, parent_id: parentId ? parseInt(parentId, 10) : null })
         });
         const data = await res.json();
         if (data.success && data.folder) {
             closeModal('newFolderModal');
+            const depth = data.depth || 1;
+
             // Dynamically inject folder into tree
             const tree = document.getElementById('sidebar-tree');
             const noNotice = document.getElementById('no-items-notice');
             if (noNotice) noNotice.remove();
 
             const folderHtml = `
-                <div class="tree-folder-group" data-folder-id="${data.folder.id}">
+                <div class="tree-folder-group" data-folder-id="${data.folder.id}" data-depth="${depth}">
                     <div class="tree-folder" draggable="true" data-folder-id="${data.folder.id}" onclick="toggleFolder(this, event)">
                         <div class="tree-label">
                             <span class="tree-icon folder-icon">&#128193;</span>
                             <span class="folder-name">${data.folder.name}</span>
                         </div>
                         <div class="item-actions" onclick="event.stopPropagation()">
+                            ${depth < 10 ? `<button class="mini-btn" title="Tambah Subfolder" onclick="openNewFolderModal(${data.folder.id})">&#43; folder</button>` : ''}
                             <button class="mini-btn" title="Tambah Catatan di Folder ini" onclick="openNewNoteModal(${data.folder.id})">&#43; note</button>
                             <button class="mini-btn danger" title="Hapus Folder" onclick="deleteFolder(${data.folder.id})">&times;</button>
                         </div>
@@ -642,21 +760,46 @@ async function submitNewFolder(e) {
             `;
 
             if (parentId) {
-                const parentGroup = document.querySelector(`.tree-folder-group[data-folder-id="${parentId}"] .tree-children`);
-                if (parentGroup) parentGroup.insertAdjacentHTML('beforeend', folderHtml);
+                const parentGroup = document.querySelector(`.tree-folder-group[data-folder-id="${parentId}"]`);
+                if (parentGroup) {
+                    let childrenContainer = parentGroup.querySelector('.tree-children');
+                    if (!childrenContainer) {
+                        childrenContainer = document.createElement('div');
+                        childrenContainer.className = 'tree-children';
+                        parentGroup.appendChild(childrenContainer);
+                    }
+                    childrenContainer.insertAdjacentHTML('beforeend', folderHtml);
+                    const parentHeader = parentGroup.querySelector('.tree-folder');
+                    if (parentHeader) parentHeader.classList.remove('collapsed');
+                }
             } else {
                 const container = document.getElementById('folders-container') || tree;
                 container.insertAdjacentHTML('afterbegin', folderHtml);
             }
 
-            // Also add option to note modal select
-            const select = document.getElementById('note-folder-select');
-            if (select) {
+            // Also add option to folder-parent-select and note-folder-select
+            const indent = '&nbsp;&nbsp;&nbsp;'.repeat(Math.max(0, depth - 1));
+            const prefix = depth > 1 ? '└─ ' : '';
+
+            const folderSelect = document.getElementById('folder-parent-select');
+            if (folderSelect) {
                 const opt = document.createElement('option');
                 opt.value = data.folder.id;
-                opt.textContent = data.folder.name;
-                select.appendChild(opt);
+                opt.setAttribute('data-depth', depth);
+                opt.innerHTML = `${indent}${prefix}${data.folder.name}${depth >= 10 ? ' (Maksimal level 10)' : ''}`;
+                if (depth >= 10) opt.disabled = true;
+                folderSelect.appendChild(opt);
             }
+
+            const noteSelect = document.getElementById('note-folder-select');
+            if (noteSelect) {
+                const opt = document.createElement('option');
+                opt.value = data.folder.id;
+                opt.innerHTML = `${indent}${prefix}${data.folder.name}`;
+                noteSelect.appendChild(opt);
+            }
+        } else {
+            alert(data.message || 'Gagal membuat folder.');
         }
     } catch (err) {
         alert('Gagal membuat folder.');
@@ -976,6 +1119,42 @@ async function moveNoteToFolder(noteId, targetFolderId) {
     }
 }
 
+// Recursively update depth attribute and + folder button on tree groups
+function updateGroupDepth(groupEl, newDepth) {
+    if (!groupEl) return;
+    groupEl.setAttribute('data-depth', newDepth);
+
+    const folderHeader = groupEl.querySelector(':scope > .tree-folder');
+    if (folderHeader) {
+        const actions = folderHeader.querySelector('.item-actions');
+        if (actions) {
+            let addFolderBtn = actions.querySelector('button[title="Tambah Subfolder"]');
+            if (newDepth >= 10) {
+                if (addFolderBtn) addFolderBtn.remove();
+            } else if (!addFolderBtn) {
+                const folderId = groupEl.getAttribute('data-folder-id');
+                const noteBtn = actions.querySelector('button[title^="Tambah Catatan"]');
+                const newBtn = document.createElement('button');
+                newBtn.className = 'mini-btn';
+                newBtn.title = 'Tambah Subfolder';
+                newBtn.setAttribute('onclick', `openNewFolderModal(${folderId})`);
+                newBtn.innerHTML = '&#43; folder';
+                if (noteBtn) {
+                    actions.insertBefore(newBtn, noteBtn);
+                } else {
+                    actions.prepend(newBtn);
+                }
+            }
+        }
+    }
+
+    const childrenContainer = groupEl.querySelector(':scope > .tree-children');
+    if (childrenContainer) {
+        const childGroups = childrenContainer.querySelectorAll(':scope > .tree-folder-group');
+        childGroups.forEach(child => updateGroupDepth(child, newDepth + 1));
+    }
+}
+
 // Move Folder API & DOM Update
 async function moveFolderToParent(folderId, targetParentId) {
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -1008,12 +1187,16 @@ async function moveFolderToParent(folderId, targetParentId) {
 
                     const folderHeader = targetGroup.querySelector('.tree-folder');
                     if (folderHeader) folderHeader.classList.remove('collapsed');
+
+                    const targetDepth = parseInt(targetGroup.getAttribute('data-depth') || '1', 10);
+                    updateGroupDepth(folderGroup, targetDepth + 1);
                 }
             } else {
                 const foldersContainer = document.getElementById('folders-container') || document.getElementById('sidebar-tree');
                 if (foldersContainer) {
                     foldersContainer.appendChild(folderGroup);
                 }
+                updateGroupDepth(folderGroup, 1);
             }
 
             folderGroup.classList.add('item-moved-highlight');

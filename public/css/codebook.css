@@ -346,6 +346,7 @@ main {
 .sidebar-tree {
   flex: 1;
   overflow-y: auto;
+  overflow-x: auto;
   padding: 12px 8px;
   display: flex;
   flex-direction: column;
@@ -726,6 +727,14 @@ body.is-drag-active .root-dropzone {
   border-radius: 8px;
   outline: none;
   width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  overflow: hidden;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  line-height: 1.4;
+  min-height: 38px;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .note-title-input:focus {
