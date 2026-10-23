@@ -603,6 +603,66 @@ document.addEventListener('DOMContentLoaded', function () {
         const editBox = document.createElement('div');
         editBox.className = 'message-edit-box';
 
+        let editSender = m.sender || 'me';
+        const row = bubble.closest('.row');
+        const whoEl = row ? row.querySelector('.meta .who') : null;
+
+        const header = document.createElement('div');
+        header.className = 'message-edit-header';
+
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'message-edit-title';
+        titleSpan.textContent = 'Edit Pesan';
+
+        const senderToggle = document.createElement('div');
+        senderToggle.className = 'sender-toggle mini';
+
+        const meBtn = document.createElement('button');
+        meBtn.type = 'button';
+        meBtn.className = editSender === 'me' ? 'active me' : '';
+        meBtn.innerHTML = '👤 Me';
+
+        const otherBtn = document.createElement('button');
+        otherBtn.type = 'button';
+        otherBtn.className = editSender === 'other' ? 'active other' : '';
+        otherBtn.innerHTML = '💬 Other';
+
+        function updateSenderUI(newSender) {
+            editSender = newSender;
+            if (editSender === 'me') {
+                meBtn.className = 'active me';
+                otherBtn.className = '';
+                if (row) {
+                    row.className = 'row me';
+                    if (whoEl) whoEl.textContent = 'Me';
+                }
+            } else {
+                otherBtn.className = 'active other';
+                meBtn.className = '';
+                if (row) {
+                    row.className = 'row other';
+                    if (whoEl) whoEl.textContent = 'Other';
+                }
+            }
+        }
+
+        meBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            updateSenderUI('me');
+        });
+
+        otherBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            updateSenderUI('other');
+        });
+
+        senderToggle.appendChild(meBtn);
+        senderToggle.appendChild(otherBtn);
+        header.appendChild(titleSpan);
+        header.appendChild(senderToggle);
+
         const textarea = document.createElement('textarea');
         textarea.className = 'message-edit-textarea';
         textarea.value = m.content || '';
@@ -636,6 +696,7 @@ document.addEventListener('DOMContentLoaded', function () {
         footer.appendChild(hint);
         footer.appendChild(actions);
 
+        editBox.appendChild(header);
         editBox.appendChild(textarea);
         editBox.appendChild(footer);
 
@@ -730,6 +791,12 @@ document.addEventListener('DOMContentLoaded', function () {
             if (editBox.parentNode) {
                 editBox.parentNode.removeChild(editBox);
             }
+            if (row) {
+                row.className = 'row ' + (m.sender || 'me');
+                if (whoEl) {
+                    whoEl.textContent = (m.sender === 'me' ? 'Me' : 'Other');
+                }
+            }
             mdWrap.style.display = '';
             tools.style.display = '';
             activeEditCancel = null;
@@ -750,7 +817,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 return;
             }
 
-            if (newContent === (m.content || '').trim()) {
+            if (newContent === (m.content || '').trim() && editSender === m.sender) {
                 cancelEdit();
                 return;
             }
@@ -768,13 +835,15 @@ document.addEventListener('DOMContentLoaded', function () {
                         'X-CSRF-TOKEN': csrfToken
                     },
                     body: JSON.stringify({
-                        content: newContent
+                        content: newContent,
+                        sender: editSender
                     })
                 });
 
                 const data = await res.json();
                 if (data.success && data.message) {
                     m.content = data.message.content;
+                    m.sender = data.message.sender;
                     m.updated_at = data.message.updated_at;
                     if (data.message.sent_time) {
                         m.sent_time = data.message.sent_time;
@@ -953,16 +1022,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     startEditMessage(m, bubble, mdWrap, tools);
                 });
             }
-
-            bubble.addEventListener('dblclick', function (e) {
-                if (e.target.closest('pre, code, a, button, input, textarea, .code-block-tools, .bubble-tools, .message-edit-box')) {
-                    return;
-                }
-                if (window.getSelection) {
-                    window.getSelection().removeAllRanges();
-                }
-                startEditMessage(m, bubble, mdWrap, tools);
-            });
 
             tools.querySelector('.del-btn').addEventListener('click', function () {
                 window.deleteMessage(m.id);
