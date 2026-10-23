@@ -1259,7 +1259,11 @@ document.addEventListener('DOMContentLoaded', function () {
             const displayTime = formatUtcToLocalTime(m.created_at, m.sent_time);
             const isEdited = m.updated_at && m.created_at && (new Date(m.updated_at).getTime() - new Date(m.created_at).getTime() > 1000);
             const editedBadge = isEdited ? '<span class="edited-tag" title="Pesan telah diedit">(diedit)</span>' : '';
-            meta.innerHTML = '<span class="who">' + (m.sender === 'me' ? 'Me' : 'Other') + '</span><span>' + displayTime + '</span>' + editedBadge;
+            if (m.sender === 'me') {
+                meta.innerHTML = editedBadge + '<span class="who">Me</span><span>' + displayTime + '</span>';
+            } else {
+                meta.innerHTML = '<span class="who">' + (m.sender === 'me' ? 'Me' : 'Other') + '</span><span>' + displayTime + '</span>' + editedBadge;
+            }
 
             const bubble = document.createElement('div');
             bubble.className = 'bubble';

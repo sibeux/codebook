@@ -87,7 +87,7 @@
     #share-thread {
         display: flex;
         flex-direction: column;
-        gap: 18px;
+        gap: 16px;
     }
     /* Shared thread overrides for clean read-only view */
     #share-thread .row {
@@ -411,7 +411,13 @@
                 const meta = document.createElement('div');
                 meta.className = 'meta';
                 const displayTime = formatUtcToLocalTime(m.created_at, m.sent_time);
-                meta.innerHTML = '<span class="who">' + (m.sender === 'me' ? 'Me' : 'Other') + '</span><span>' + displayTime + '</span>';
+                const isEdited = m.updated_at && m.created_at && (new Date(m.updated_at).getTime() - new Date(m.created_at).getTime() > 1000);
+                const editedBadge = isEdited ? '<span class="edited-tag" title="Pesan telah diedit">(diedit)</span>' : '';
+                if (m.sender === 'me') {
+                    meta.innerHTML = editedBadge + '<span class="who">Me</span><span>' + displayTime + '</span>';
+                } else {
+                    meta.innerHTML = '<span class="who">Other</span><span>' + displayTime + '</span>' + editedBadge;
+                }
 
                 const bubble = document.createElement('div');
                 bubble.className = 'bubble';

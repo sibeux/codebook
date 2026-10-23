@@ -727,7 +727,7 @@ body.is-drag-active .root-dropzone {
   padding: 24px 28px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
   min-width: 0;
   background: var(--bg);
 }
@@ -1085,7 +1085,6 @@ body.is-drag-active .root-dropzone {
 .edited-tag {
   font-size: 10px;
   color: var(--muted);
-  margin-left: 6px;
   font-style: italic;
   font-weight: normal;
   user-select: none;
@@ -1185,8 +1184,8 @@ body.is-drag-active .root-dropzone {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 16px;
-  margin: -10px 0 14px 0;
+  height: 6px;
+  margin: 0;
   z-index: 5;
 }
 .insert-divider::before {
@@ -1236,6 +1235,7 @@ body.is-drag-active .root-dropzone {
 
 /* Inline Insert Row */
 .row.insert-row {
+  margin-top: 8px;
   margin-bottom: 24px;
   animation: fadeInInsert 0.2s ease-out;
 }
