@@ -17,12 +17,18 @@
   --me-bg: rgba(217, 119, 6, 0.14);
   --me-border: rgba(217, 119, 6, 0.32);
   --me-fade: #1E1B16;
+  --me-badge-bg: rgba(217, 119, 6, 0.2);
+  --me-badge-border: rgba(217, 119, 6, 0.4);
+  --me-badge-text: #FBBF24;
   --other: #9C9C9C;
   --other-bg: #242424;
   --other-border: #323232;
   --other-border-accent: #444444;
   --other-btn-bg: #363636;
   --other-fade: #242424;
+  --other-badge-bg: #2A2A2A;
+  --other-badge-border: #3C3C3C;
+  --other-badge-text: #B4B4B4;
   --danger: #E05252;
   --danger-bg: rgba(224, 82, 82, 0.15);
   --radius: 10px;
@@ -53,16 +59,22 @@
   --bubble-text: #2E2E2E;
   --bubble-heading: #1F1F1F;
   --muted: #787774;
-  --me: #B45309;
-  --me-bg: #FBF3E4;
-  --me-border: #ECD6B2;
-  --me-fade: #FBF3E4;
+  --me: #D97706;
+  --me-bg: #FFF7ED;
+  --me-border: #FED7AA;
+  --me-fade: #FFF7ED;
+  --me-badge-bg: #FEF3C7;
+  --me-badge-border: #FDE68A;
+  --me-badge-text: #92400E;
   --other: #5A5852;
-  --other-bg: #FBFBFA;
-  --other-border: #E3E1DA;
-  --other-border-accent: #CFCBC2;
+  --other-bg: #FFFFFF;
+  --other-border: #E2E8F0;
+  --other-border-accent: #94A3B8;
   --other-btn-bg: #5A5852;
-  --other-fade: #FBFBFA;
+  --other-fade: #FFFFFF;
+  --other-badge-bg: #F1F5F9;
+  --other-badge-border: #CBD5E1;
+  --other-badge-text: #475569;
   --danger: #C53030;
   --danger-bg: #FCE8E8;
   --focus-ring: rgba(180, 83, 9, 0.22);
@@ -714,37 +726,70 @@ body.is-drag-active .root-dropzone {
 
 .row {
   display: flex;
-  max-width: 100%;
+  width: 100%;
 }
 .row.me { justify-content: flex-end; }
 .row.other { justify-content: flex-start; }
 
 .bubble-wrap {
   width: 100%;
+  max-width: 90%;
   min-width: 0;
   display: flex;
   flex-direction: column;
 }
-.row.me .bubble-wrap { align-items: flex-end; }
-.row.other .bubble-wrap { align-items: flex-start; }
+.row.me .bubble-wrap {
+  align-items: flex-end;
+  margin-left: auto;
+}
+.row.other .bubble-wrap {
+  align-items: flex-start;
+  margin-right: auto;
+}
 
 .meta {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   color: var(--muted);
-  margin-bottom: 5px;
+  margin-bottom: 6px;
   padding: 0 4px;
   display: flex;
   gap: 8px;
   align-items: center;
 }
-.meta .who { font-weight: 600; }
-.row.me .meta .who { color: var(--me); }
-.row.other .meta .who { color: var(--other); }
+.meta .who {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1.5px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.2px;
+  transition: all 0.15s ease;
+}
+.row.me .meta .who {
+  background: var(--me-badge-bg);
+  color: var(--me-badge-text);
+  border: 1px solid var(--me-badge-border);
+}
+.row.me .meta .who::before {
+  content: "👤";
+  font-size: 10px;
+}
+.row.other .meta .who {
+  background: var(--other-badge-bg);
+  color: var(--other-badge-text);
+  border: 1px solid var(--other-badge-border);
+}
+.row.other .meta .who::before {
+  content: "💬";
+  font-size: 10px;
+}
 
 .bubble {
   position: relative;
-  border-radius: var(--radius);
   padding: 14px 18px;
   border: 1px solid var(--border);
   background: var(--panel);
@@ -759,13 +804,15 @@ body.is-drag-active .root-dropzone {
 .row.me .bubble {
   background: var(--me-bg);
   border-color: var(--me-border);
-  border-right: 2.5px solid var(--me);
+  border-right: 3.5px solid var(--me);
+  border-radius: 14px 14px 3px 14px;
 }
 
 .row.other .bubble {
   background: var(--other-bg);
   border-color: var(--other-border);
-  border-left: 2.5px solid var(--other-border-accent);
+  border-left: 3.5px solid var(--other-border-accent);
+  border-radius: 14px 14px 14px 3px;
 }
 
 .md {
@@ -903,6 +950,9 @@ body.is-drag-active .root-dropzone {
 }
 
 @media (max-width: 640px) {
+  .bubble-wrap {
+    max-width: 96%;
+  }
   .code-lang-badge {
     display: none;
   }
@@ -951,6 +1001,12 @@ body.is-drag-active .root-dropzone {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid var(--border);
+}
+.row.me .bubble-tools {
+  border-top-color: var(--me-border);
+}
+.row.other .bubble-tools {
+  border-top-color: var(--other-border);
 }
 .toggle-btn {
   background: var(--panel-2);
