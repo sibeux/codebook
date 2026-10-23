@@ -587,14 +587,19 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Start inline editing for a chat message
     let activeEditCancel = null;
+    let activeInsertCancel = null;
 
     function startEditMessage(m, bubble, mdWrap, tools) {
         if (!window.CURRENT_NOTE) return;
 
-        // If another message is already being edited, cancel it first
+        // If another message is already being edited or inserted, cancel it first
         if (activeEditCancel) {
             activeEditCancel();
             activeEditCancel = null;
+        }
+        if (activeInsertCancel) {
+            activeInsertCancel();
+            activeInsertCancel = null;
         }
 
         mdWrap.style.display = 'none';
@@ -907,6 +912,296 @@ document.addEventListener('DOMContentLoaded', function () {
         requestAnimationFrame(focusAndPlaceCursor);
     }
 
+    // Start inline message insertion below an existing message
+    function startInsertMessage(m, row) {
+        if (!window.CURRENT_NOTE) return;
+
+        // If an edit or insert is already active, cancel it first
+        if (activeEditCancel) {
+            activeEditCancel();
+            activeEditCancel = null;
+        }
+        if (activeInsertCancel) {
+            activeInsertCancel();
+            activeInsertCancel = null;
+        }
+
+        let insertSender = 'me';
+
+        const insertRow = document.createElement('div');
+        insertRow.className = 'row insert-row me';
+
+        const wrap = document.createElement('div');
+        wrap.className = 'bubble-wrap';
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+        meta.innerHTML = '<span class="who">Me</span><span>Sisipkan Pesan</span>';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+
+        const insertBox = document.createElement('div');
+        insertBox.className = 'message-edit-box message-insert-box';
+
+        const header = document.createElement('div');
+        header.className = 'message-edit-header';
+
+        const titleSpan = document.createElement('span');
+        titleSpan.className = 'message-edit-title';
+        titleSpan.innerHTML = '<span style="color:var(--me);margin-right:4px;">&#43;</span> Sisipkan Pesan di Bawah';
+
+        const senderToggle = document.createElement('div');
+        senderToggle.className = 'sender-toggle mini';
+
+        const meBtn = document.createElement('button');
+        meBtn.type = 'button';
+        meBtn.className = 'active me';
+        meBtn.innerHTML = '👤 Me';
+
+        const otherBtn = document.createElement('button');
+        otherBtn.type = 'button';
+        otherBtn.className = '';
+        otherBtn.innerHTML = '💬 Other';
+
+        const whoEl = meta.querySelector('.who');
+
+        function updateSenderUI(newSender) {
+            insertSender = newSender;
+            if (insertSender === 'me') {
+                meBtn.className = 'active me';
+                otherBtn.className = '';
+                insertRow.className = 'row insert-row me';
+                if (whoEl) whoEl.textContent = 'Me';
+            } else {
+                otherBtn.className = 'active other';
+                meBtn.className = '';
+                insertRow.className = 'row insert-row other';
+                if (whoEl) whoEl.textContent = 'Other';
+            }
+        }
+
+        meBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            updateSenderUI('me');
+        });
+
+        otherBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            updateSenderUI('other');
+        });
+
+        senderToggle.appendChild(meBtn);
+        senderToggle.appendChild(otherBtn);
+        header.appendChild(titleSpan);
+        header.appendChild(senderToggle);
+
+        const textarea = document.createElement('textarea');
+        textarea.className = 'message-edit-textarea';
+        textarea.placeholder = 'Tulis pesan markdown baru... (# heading, **bold**, code, dsb)';
+        textarea.rows = 3;
+
+        const footer = document.createElement('div');
+        footer.className = 'message-edit-footer';
+
+        const hint = document.createElement('span');
+        hint.className = 'message-edit-hint';
+        hint.textContent = 'Ctrl + Enter kirim · Esc batal';
+
+        const actions = document.createElement('div');
+        actions.className = 'message-edit-actions';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.type = 'button';
+        cancelBtn.className = 'icon-btn';
+        cancelBtn.textContent = 'Batal';
+
+        const submitBtn = document.createElement('button');
+        submitBtn.type = 'button';
+        submitBtn.className = 'icon-btn btn-primary';
+        submitBtn.textContent = 'Sisipkan Pesan';
+
+        actions.appendChild(cancelBtn);
+        actions.appendChild(submitBtn);
+        footer.appendChild(hint);
+        footer.appendChild(actions);
+
+        insertBox.appendChild(header);
+        insertBox.appendChild(textarea);
+        insertBox.appendChild(footer);
+
+        bubble.appendChild(insertBox);
+        wrap.appendChild(meta);
+        wrap.appendChild(bubble);
+        insertRow.appendChild(wrap);
+
+        // Position insertRow right after the current row (or its divider)
+        const nextEl = row.nextElementSibling;
+        if (nextEl && nextEl.classList.contains('insert-divider')) {
+            nextEl.insertAdjacentElement('afterend', insertRow);
+        } else {
+            row.insertAdjacentElement('afterend', insertRow);
+        }
+
+        function cancelInsert() {
+            if (insertRow.parentNode) {
+                insertRow.parentNode.removeChild(insertRow);
+            }
+            activeInsertCancel = null;
+        }
+
+        activeInsertCancel = cancelInsert;
+
+        cancelBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            cancelInsert();
+        });
+
+        function adjustInsertHeight() {
+            const prevTaScrollTop = textarea.scrollTop;
+            const prevThreadScrollTop = thread ? thread.scrollTop : 0;
+
+            let mirror = document.getElementById('codebook-resize-mirror');
+            if (!mirror) {
+                mirror = document.createElement('textarea');
+                mirror.id = 'codebook-resize-mirror';
+                mirror.setAttribute('aria-hidden', 'true');
+                mirror.setAttribute('tabindex', '-1');
+                mirror.style.position = 'fixed';
+                mirror.style.top = '-9999px';
+                mirror.style.left = '-9999px';
+                mirror.style.visibility = 'hidden';
+                mirror.style.pointerEvents = 'none';
+                mirror.style.zIndex = '-9999';
+                mirror.style.opacity = '0';
+                mirror.style.overflow = 'hidden';
+                mirror.style.resize = 'none';
+                document.body.appendChild(mirror);
+            }
+
+            const computed = window.getComputedStyle(textarea);
+            mirror.style.boxSizing = computed.boxSizing;
+            mirror.style.width = textarea.clientWidth + 'px';
+            mirror.style.fontFamily = computed.fontFamily;
+            mirror.style.fontSize = computed.fontSize;
+            mirror.style.lineHeight = computed.lineHeight;
+            mirror.style.padding = computed.padding;
+            mirror.style.border = computed.border;
+            mirror.style.letterSpacing = computed.letterSpacing;
+            mirror.style.whiteSpace = 'pre-wrap';
+            mirror.style.wordBreak = 'break-word';
+            mirror.value = textarea.value;
+
+            mirror.style.height = '0px';
+            const targetHeight = Math.max(84, mirror.scrollHeight + 4);
+
+            textarea.style.height = targetHeight + 'px';
+
+            if (thread && thread.scrollTop !== prevThreadScrollTop) {
+                thread.scrollTop = prevThreadScrollTop;
+            }
+            if (prevTaScrollTop > 0) {
+                textarea.scrollTop = prevTaScrollTop;
+            }
+        }
+
+        adjustInsertHeight();
+        textarea.addEventListener('input', adjustInsertHeight);
+
+        async function submitInsert() {
+            const newContent = textarea.value.trim();
+            if (!newContent) {
+                alert('Pesan tidak boleh kosong.');
+                textarea.focus();
+                return;
+            }
+
+            submitBtn.disabled = true;
+            cancelBtn.disabled = true;
+            submitBtn.textContent = 'Menyisipkan...';
+
+            const timeStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+            try {
+                const res = await fetch(`/notes/${window.CURRENT_NOTE.id}/messages`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({
+                        sender: insertSender,
+                        content: newContent,
+                        after_message_id: m.id,
+                        sent_time: timeStr
+                    })
+                });
+
+                const data = await res.json();
+                if (data.success && data.message) {
+                    const idx = messages.findIndex(function (msg) { return msg.id === m.id; });
+                    if (idx !== -1) {
+                        messages.splice(idx + 1, 0, data.message);
+                    } else {
+                        messages.push(data.message);
+                    }
+                    activeInsertCancel = null;
+                    renderAll();
+
+                    requestAnimationFrame(function () {
+                        const newMd = document.getElementById('md-' + data.message.id);
+                        if (newMd) {
+                            const newBubble = newMd.closest('.bubble');
+                            if (newBubble) {
+                                newBubble.classList.add('bubble-insert-highlight');
+                            }
+                            newMd.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                    });
+                } else {
+                    alert((data && data.message) || 'Gagal menyisipkan pesan.');
+                    submitBtn.disabled = false;
+                    cancelBtn.disabled = false;
+                    submitBtn.textContent = 'Sisipkan Pesan';
+                }
+            } catch (err) {
+                console.error('Error inserting message:', err);
+                alert('Gagal menghubungi server untuk menyisipkan pesan.');
+                submitBtn.disabled = false;
+                cancelBtn.disabled = false;
+                submitBtn.textContent = 'Sisipkan Pesan';
+            }
+        }
+
+        submitBtn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            submitInsert();
+        });
+
+        textarea.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                cancelInsert();
+            } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                submitInsert();
+            }
+        });
+
+        // Focus & scroll into view
+        setTimeout(function () {
+            if (insertRow.parentNode) {
+                insertRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                textarea.focus();
+            }
+        }, 50);
+    }
+
     // Format UTC ISO timestamp into viewer's local browser time
     function formatUtcToLocalTime(dateStr, fallbackStr) {
         if (!dateStr) return fallbackStr || '';
@@ -923,6 +1218,10 @@ document.addEventListener('DOMContentLoaded', function () {
     function renderAll() {
         if (!thread) return;
         activeEditCancel = null;
+        if (activeInsertCancel) {
+            activeInsertCancel();
+        }
+        activeInsertCancel = null;
         thread.innerHTML = '';
 
         if (!window.CURRENT_NOTE) {
@@ -948,7 +1247,7 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
-        messages.forEach(function (m) {
+        messages.forEach(function (m, idx) {
             const row = document.createElement('div');
             row.className = 'row ' + m.sender;
 
@@ -994,8 +1293,14 @@ document.addEventListener('DOMContentLoaded', function () {
             tools.className = 'bubble-tools';
             tools.innerHTML =
                 '<span class="linecount">' + lineCount + ' baris &middot; ' + charCount + ' karakter</span>' +
-                '<div style="display:flex;align-items:center;gap:8px;">' +
+                '<div style="display:flex;align-items:center;gap:6px;">' +
                 '<button class="toggle-btn" id="toggle-' + m.id + '">&#8964; tampilkan semua</button>' +
+                '<button type="button" class="insert-btn" title="Sisipkan pesan di bawah" data-id="' + m.id + '" aria-label="Sisipkan pesan di bawah">' +
+                '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+                '<line x1="12" y1="5" x2="12" y2="19"></line>' +
+                '<line x1="5" y1="12" x2="19" y2="12"></line>' +
+                '</svg>' +
+                '</button>' +
                 '<button type="button" class="edit-btn" title="Edit teks pesan" data-id="' + m.id + '" aria-label="Edit pesan">' +
                 '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
                 '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>' +
@@ -1010,6 +1315,18 @@ document.addEventListener('DOMContentLoaded', function () {
             wrap.appendChild(bubble);
             row.appendChild(wrap);
             thread.appendChild(row);
+
+            const insertBtn = tools.querySelector('.insert-btn');
+            if (insertBtn) {
+                insertBtn.addEventListener('mousedown', function (e) {
+                    e.preventDefault();
+                });
+                insertBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    startInsertMessage(m, row);
+                });
+            }
 
             const editBtn = tools.querySelector('.edit-btn');
             if (editBtn) {
@@ -1026,6 +1343,23 @@ document.addEventListener('DOMContentLoaded', function () {
             tools.querySelector('.del-btn').addEventListener('click', function () {
                 window.deleteMessage(m.id);
             });
+
+            // Divider between messages with insert button
+            if (idx < messages.length - 1) {
+                const divider = document.createElement('div');
+                divider.className = 'insert-divider';
+                divider.innerHTML =
+                    '<button type="button" class="insert-divider-btn" title="Sisipkan pesan di antara pesan ini">' +
+                    '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>' +
+                    '<span>Sisipkan pesan di sini</span>' +
+                    '</button>';
+                divider.querySelector('.insert-divider-btn').addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    startInsertMessage(m, row);
+                });
+                thread.appendChild(divider);
+            }
 
             setTimeout(function () {
                 const toggleBtn = document.getElementById('toggle-' + m.id);

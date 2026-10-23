@@ -1056,6 +1056,7 @@ body.is-drag-active .root-dropzone {
   transition: all 0.15s ease;
 }
 .del-btn:hover { opacity: 1; color: var(--danger); }
+.insert-btn,
 .edit-btn {
   background: none;
   border: none;
@@ -1071,11 +1072,13 @@ body.is-drag-active .root-dropzone {
   border-radius: 4px;
   transition: all 0.15s ease;
 }
+.insert-btn:hover,
 .edit-btn:hover {
   opacity: 1;
   color: var(--me);
   background: var(--panel-hover);
 }
+.insert-btn svg,
 .edit-btn svg {
   display: block;
 }
@@ -1174,6 +1177,104 @@ body.is-drag-active .root-dropzone {
   padding: 5px 12px;
   font-size: 12px;
   border-radius: 6px;
+}
+
+/* Between-Message Insert Divider */
+.insert-divider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 16px;
+  margin: -10px 0 14px 0;
+  z-index: 5;
+}
+.insert-divider::before {
+  content: '';
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  height: 1px;
+  background: transparent;
+  transition: background 0.2s ease;
+  pointer-events: none;
+}
+.insert-divider-btn {
+  opacity: 0;
+  pointer-events: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--panel);
+  color: var(--muted);
+  border: 1px dashed var(--border-hover);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  transform: scale(0.92);
+  box-shadow: var(--shadow-sm);
+}
+.insert-divider:hover::before {
+  background: var(--border-hover);
+}
+.insert-divider:hover .insert-divider-btn {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+.insert-divider-btn:hover {
+  border-color: var(--me);
+  color: var(--me);
+  background: var(--panel-2);
+  transform: scale(1.04);
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.2);
+}
+
+/* Inline Insert Row */
+.row.insert-row {
+  margin-bottom: 24px;
+  animation: fadeInInsert 0.2s ease-out;
+}
+@keyframes fadeInInsert {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.row.insert-row .bubble {
+  border: 1.5px dashed var(--me-border);
+  background: var(--panel);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+[data-theme="light"] .row.insert-row .bubble {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+.row.insert-row.me .bubble {
+  border-color: var(--me);
+  background: var(--me-bg);
+}
+.row.insert-row.other .bubble {
+  border-color: var(--other-border-accent);
+  background: var(--other-bg);
+}
+.bubble-insert-highlight {
+  animation: insertHighlight 1.8s ease-out;
+}
+@keyframes insertHighlight {
+  0% {
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.75);
+    transform: scale(1.01);
+  }
+  70% {
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.3);
+    transform: scale(1);
+  }
+  100% {
+    box-shadow: none;
+    transform: scale(1);
+  }
 }
 
 /* Right Panel: Composer */

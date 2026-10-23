@@ -142,4 +142,56 @@ class CodebookTest extends TestCase
             'content' => 'Original Content',
         ]);
     }
+
+    public function test_user_can_insert_message_below_another_message(): void
+    {
+        $user = User::create([
+            'email' => 'insert_test@sibeux.my.id',
+            'name' => 'Insert Tester',
+            'password' => bcrypt('password'),
+            'role' => 'user',
+        ]);
+
+        $note = Note::create([
+            'user_id' => $user->user_id,
+            'title' => 'Thread Note',
+            'mode' => 'markdown',
+        ]);
+
+        $msg1 = $note->messages()->create([
+            'sender' => 'me',
+            'content' => 'First Message',
+            'sent_time' => '10:00',
+            'order_index' => 1,
+        ]);
+
+        $msg2 = $note->messages()->create([
+            'sender' => 'other',
+            'content' => 'Second Message',
+            'sent_time' => '10:01',
+            'order_index' => 2,
+        ]);
+
+        // Insert new message below msg1 (between msg1 and msg2)
+        $response = $this->actingAs($user)->postJson("/notes/{$note->id}/messages", [
+            'sender' => 'me',
+            'content' => 'Inserted Message Between 1 and 2',
+            'sent_time' => '10:00:30',
+            'after_message_id' => $msg1->id,
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('success', true);
+        $insertedId = $response->json('message.id');
+
+        $messages = $note->fresh()->messages()->get();
+        $this->assertCount(3, $messages);
+        $this->assertEquals($msg1->id, $messages[0]->id);
+        $this->assertEquals($insertedId, $messages[1]->id);
+        $this->assertEquals($msg2->id, $messages[2]->id);
+
+        $this->assertEquals(1, $messages[0]->order_index);
+        $this->assertEquals(2, $messages[1]->order_index);
+        $this->assertEquals(3, $messages[2]->order_index);
+    }
 }
