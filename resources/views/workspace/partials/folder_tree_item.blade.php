@@ -1,7 +1,12 @@
 <div class="tree-folder-group" data-folder-id="{{ $folder->id }}" data-depth="{{ $depth ?? 1 }}">
     <div class="tree-folder" draggable="true" data-folder-id="{{ $folder->id }}" onclick="toggleFolder(this, event)">
         <div class="tree-label">
-            <span class="tree-icon folder-icon">&#128193;</span>
+            <button type="button" class="folder-toggle-btn" title="Tutup folder" aria-expanded="true" onclick="event.stopPropagation(); toggleFolder(this.closest('.tree-folder'), event)">
+                <svg class="folder-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </button>
+            <span class="tree-icon folder-icon">&#128194;</span>
             <span class="folder-name">{{ $folder->name }}</span>
         </div>
         <div class="item-actions" onclick="event.stopPropagation()">
@@ -14,12 +19,12 @@
     </div>
 
     <div class="tree-children">
-        {{-- Subfolders (Up to max depth 10) --}}
+        {{-- Subfolders (Up to max depth 10, always placed on top) --}}
         @foreach ($folder->children as $child)
             @include('workspace.partials.folder_tree_item', ['folder' => $child, 'activeNote' => $activeNote, 'depth' => ($depth ?? 1) + 1])
         @endforeach
 
-        {{-- Notes in this folder --}}
+        {{-- Notes in this folder (placed below subfolders) --}}
         @foreach ($folder->notes as $note)
             <a href="{{ route('workspace', ['note' => $note->id]) }}" 
                class="tree-note {{ $activeNote && $activeNote->id === $note->id ? 'active' : '' }}" 
@@ -37,6 +42,10 @@
                 </div>
             </a>
         @endforeach
+
+        @if ($folder->children->isEmpty() && $folder->notes->isEmpty())
+            <div class="tree-empty-notice">(kosong)</div>
+        @endif
     </div>
 </div>
 

@@ -1160,7 +1160,12 @@ async function deleteNote(noteId) {
         });
         const data = await res.json();
         if (data.success) {
+            const parentGroup = navItem ? navItem.closest('.tree-folder-group') : null;
             if (navItem) navItem.remove();
+
+            if (parentGroup) {
+                checkAndUpdateFolderEmptyState(parentGroup);
+            }
 
             if (window.CURRENT_NOTE && window.CURRENT_NOTE.id == noteId) {
                 const nextNote = document.querySelector('.tree-note');
@@ -1209,7 +1214,12 @@ async function deleteFolder(folderId) {
         });
         const data = await res.json();
         if (data.success) {
+            const parentGroup = folderGroup?.parentElement?.closest('.tree-folder-group');
             if (folderGroup) folderGroup.remove();
+
+            if (parentGroup) {
+                checkAndUpdateFolderEmptyState(parentGroup);
+            }
 
             // Also remove from selects
             const opt1 = document.querySelector(`#folder-parent-select option[value="${folderId}"]`);
@@ -1235,26 +1245,107 @@ async function deleteFolder(folderId) {
     }
 }
 
-// Toggle folder expansion
+// Toggle folder expansion state
 function toggleFolder(el, event) {
+    if (!el) return;
     el.classList.toggle('collapsed');
+    updateFolderToggleState(el);
 }
+
+function updateFolderToggleState(folderHeader) {
+    if (!folderHeader) return;
+    const isCollapsed = folderHeader.classList.contains('collapsed');
+    const toggleBtn = folderHeader.querySelector('.folder-toggle-btn');
+    const iconEl = folderHeader.querySelector('.folder-icon');
+
+    if (toggleBtn) {
+        toggleBtn.setAttribute('title', isCollapsed ? 'Buka folder' : 'Tutup folder');
+        toggleBtn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+    }
+
+    if (iconEl) {
+        iconEl.innerHTML = isCollapsed ? '&#128193;' : '&#128194;';
+    }
+}
+
+function expandAllFolders() {
+    document.querySelectorAll('.tree-folder').forEach(folder => {
+        folder.classList.remove('collapsed');
+        updateFolderToggleState(folder);
+    });
+}
+
+function collapseAllFolders() {
+    document.querySelectorAll('.tree-folder').forEach(folder => {
+        folder.classList.add('collapsed');
+        updateFolderToggleState(folder);
+    });
+}
+
+function checkAndUpdateFolderEmptyState(groupEl) {
+    if (!groupEl) return;
+    const childrenContainer = groupEl.querySelector(':scope > .tree-children');
+    if (!childrenContainer) return;
+
+    const hasSubfolders = childrenContainer.querySelector(':scope > .tree-folder-group') !== null;
+    const hasNotes = childrenContainer.querySelector(':scope > .tree-note') !== null;
+    const existingNotice = childrenContainer.querySelector(':scope > .tree-empty-notice');
+
+    if (!hasSubfolders && !hasNotes) {
+        if (!existingNotice) {
+            const notice = document.createElement('div');
+            notice.className = 'tree-empty-notice';
+            notice.textContent = '(kosong)';
+            childrenContainer.appendChild(notice);
+        }
+    } else {
+        if (existingNotice) {
+            existingNotice.remove();
+        }
+    }
+}
+
+window.toggleFolder = toggleFolder;
+window.updateFolderToggleState = updateFolderToggleState;
+window.expandAllFolders = expandAllFolders;
+window.collapseAllFolders = collapseAllFolders;
+window.checkAndUpdateFolderEmptyState = checkAndUpdateFolderEmptyState;
 
 // Filter Sidebar Tree
 function filterTree(query) {
     const q = query.toLowerCase().trim();
     const notes = document.querySelectorAll('.tree-note');
+    const emptyNotices = document.querySelectorAll('.tree-empty-notice');
+    const clearBtn = document.getElementById('search-clear-btn');
+
+    if (clearBtn) {
+        clearBtn.style.display = query ? 'flex' : 'none';
+    }
+
     if (!q) {
         notes.forEach(el => el.style.display = '');
+        emptyNotices.forEach(el => el.style.display = '');
         return;
     }
 
+    emptyNotices.forEach(el => el.style.display = 'none');
     notes.forEach(note => {
         const title = note.querySelector('.note-title-text')?.textContent.toLowerCase() || '';
         const match = title.includes(q);
         note.style.display = match ? 'flex' : 'none';
     });
 }
+
+function clearSearch() {
+    const input = document.getElementById('tree-search');
+    if (input) {
+        input.value = '';
+        filterTree('');
+        input.focus();
+    }
+}
+
+window.clearSearch = clearSearch;
 
 // Modals
 function openNewFolderModal(parentId = null) {
@@ -1344,7 +1435,12 @@ async function submitNewFolder(e) {
                 <div class="tree-folder-group" data-folder-id="${data.folder.id}" data-depth="${depth}">
                     <div class="tree-folder" draggable="true" data-folder-id="${data.folder.id}" onclick="toggleFolder(this, event)">
                         <div class="tree-label">
-                            <span class="tree-icon folder-icon">&#128193;</span>
+                            <button type="button" class="folder-toggle-btn" title="Tutup folder" aria-expanded="true" onclick="event.stopPropagation(); toggleFolder(this.closest('.tree-folder'), event)">
+                                <svg class="folder-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="9 18 15 12 9 6"></polyline>
+                                </svg>
+                            </button>
+                            <span class="tree-icon folder-icon">&#128194;</span>
                             <span class="folder-name">${data.folder.name}</span>
                         </div>
                         <div class="item-actions" onclick="event.stopPropagation()">
@@ -1353,7 +1449,9 @@ async function submitNewFolder(e) {
                             <button class="mini-btn danger" title="Hapus Folder" onclick="deleteFolder(${data.folder.id})">&times;</button>
                         </div>
                     </div>
-                    <div class="tree-children"></div>
+                    <div class="tree-children">
+                        <div class="tree-empty-notice">(kosong)</div>
+                    </div>
                 </div>
             `;
 
@@ -1366,9 +1464,26 @@ async function submitNewFolder(e) {
                         childrenContainer.className = 'tree-children';
                         parentGroup.appendChild(childrenContainer);
                     }
-                    childrenContainer.insertAdjacentHTML('beforeend', folderHtml);
+
+                    // Remove empty notice from parent if present
+                    const parentEmptyNotice = childrenContainer.querySelector(':scope > .tree-empty-notice');
+                    if (parentEmptyNotice) {
+                        parentEmptyNotice.remove();
+                    }
+
+                    // Ensure folder is placed at the top (before any notes in this folder)
+                    const firstNote = childrenContainer.querySelector(':scope > .tree-note');
+                    if (firstNote) {
+                        firstNote.insertAdjacentHTML('beforebegin', folderHtml);
+                    } else {
+                        childrenContainer.insertAdjacentHTML('beforeend', folderHtml);
+                    }
+
                     const parentHeader = parentGroup.querySelector('.tree-folder');
-                    if (parentHeader) parentHeader.classList.remove('collapsed');
+                    if (parentHeader) {
+                        parentHeader.classList.remove('collapsed');
+                        updateFolderToggleState(parentHeader);
+                    }
                 }
             } else {
                 const container = document.getElementById('folders-container') || tree;
@@ -1448,9 +1563,29 @@ async function submitNewNote(e) {
             `;
 
             if (folderId) {
-                const folderChildren = document.querySelector(`.tree-folder-group[data-folder-id="${folderId}"] .tree-children`);
-                if (folderChildren) {
+                const parentGroup = document.querySelector(`.tree-folder-group[data-folder-id="${folderId}"]`);
+                if (parentGroup) {
+                    let folderChildren = parentGroup.querySelector('.tree-children');
+                    if (!folderChildren) {
+                        folderChildren = document.createElement('div');
+                        folderChildren.className = 'tree-children';
+                        parentGroup.appendChild(folderChildren);
+                    }
+
+                    // Remove empty notice if present
+                    const emptyNotice = folderChildren.querySelector(':scope > .tree-empty-notice');
+                    if (emptyNotice) {
+                        emptyNotice.remove();
+                    }
+
+                    // Append note below subfolders
                     folderChildren.insertAdjacentHTML('beforeend', noteHtml);
+
+                    const parentHeader = parentGroup.querySelector('.tree-folder');
+                    if (parentHeader) {
+                        parentHeader.classList.remove('collapsed');
+                        updateFolderToggleState(parentHeader);
+                    }
                 }
             } else {
                 const rootSection = document.getElementById('root-notes-section');
@@ -1875,6 +2010,9 @@ async function moveNoteToFolder(noteId, targetFolderId) {
 
         const data = await res.json();
         if (data.success) {
+            const oldFolderId = noteEl.getAttribute('data-folder-id');
+            const oldParentGroup = oldFolderId ? document.querySelector(`.tree-folder-group[data-folder-id="${oldFolderId}"]`) : null;
+
             if (targetFolderId) {
                 noteEl.setAttribute('data-folder-id', targetFolderId);
                 const targetGroup = document.querySelector(`.tree-folder-group[data-folder-id="${targetFolderId}"]`);
@@ -1885,10 +2023,17 @@ async function moveNoteToFolder(noteId, targetFolderId) {
                         children.className = 'tree-children';
                         targetGroup.appendChild(children);
                     }
+                    const emptyNotice = children.querySelector(':scope > .tree-empty-notice');
+                    if (emptyNotice) emptyNotice.remove();
+
+                    // Notes are appended below any subfolders
                     children.appendChild(noteEl);
 
                     const folderHeader = targetGroup.querySelector('.tree-folder');
-                    if (folderHeader) folderHeader.classList.remove('collapsed');
+                    if (folderHeader) {
+                        folderHeader.classList.remove('collapsed');
+                        updateFolderToggleState(folderHeader);
+                    }
                 }
             } else {
                 noteEl.removeAttribute('data-folder-id');
@@ -1896,6 +2041,10 @@ async function moveNoteToFolder(noteId, targetFolderId) {
                 const rootContainer = document.getElementById('root-notes-container');
                 if (rootSection) rootSection.style.display = 'block';
                 if (rootContainer) rootContainer.appendChild(noteEl);
+            }
+
+            if (oldParentGroup) {
+                checkAndUpdateFolderEmptyState(oldParentGroup);
             }
 
             // Check if root notes section is now empty
@@ -1971,6 +2120,8 @@ async function moveFolderToParent(folderId, targetParentId) {
 
         const data = await res.json();
         if (data.success) {
+            const oldParentGroup = folderGroup.parentElement?.closest('.tree-folder-group');
+
             if (targetParentId) {
                 const targetGroup = document.querySelector(`.tree-folder-group[data-folder-id="${targetParentId}"]`);
                 if (targetGroup) {
@@ -1980,10 +2131,22 @@ async function moveFolderToParent(folderId, targetParentId) {
                         children.className = 'tree-children';
                         targetGroup.appendChild(children);
                     }
-                    children.appendChild(folderGroup);
+                    const emptyNotice = children.querySelector(':scope > .tree-empty-notice');
+                    if (emptyNotice) emptyNotice.remove();
+
+                    // Folders are always placed at the top (before any notes in this folder)
+                    const firstNote = children.querySelector(':scope > .tree-note');
+                    if (firstNote) {
+                        children.insertBefore(folderGroup, firstNote);
+                    } else {
+                        children.appendChild(folderGroup);
+                    }
 
                     const folderHeader = targetGroup.querySelector('.tree-folder');
-                    if (folderHeader) folderHeader.classList.remove('collapsed');
+                    if (folderHeader) {
+                        folderHeader.classList.remove('collapsed');
+                        updateFolderToggleState(folderHeader);
+                    }
 
                     const targetDepth = parseInt(targetGroup.getAttribute('data-depth') || '1', 10);
                     updateGroupDepth(folderGroup, targetDepth + 1);
@@ -1994,6 +2157,10 @@ async function moveFolderToParent(folderId, targetParentId) {
                     foldersContainer.appendChild(folderGroup);
                 }
                 updateGroupDepth(folderGroup, 1);
+            }
+
+            if (oldParentGroup) {
+                checkAndUpdateFolderEmptyState(oldParentGroup);
             }
 
             folderGroup.classList.add('item-moved-highlight');
@@ -2010,4 +2177,18 @@ async function moveFolderToParent(folderId, targetParentId) {
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', function () {
     initSidebarDragAndDrop();
+    document.querySelectorAll('.tree-folder').forEach(folder => {
+        updateFolderToggleState(folder);
+    });
+
+    const treeSearchInput = document.getElementById('tree-search');
+    if (treeSearchInput) {
+        treeSearchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && this.value) {
+                e.preventDefault();
+                e.stopPropagation();
+                clearSearch();
+            }
+        });
+    }
 });

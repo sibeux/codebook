@@ -41,18 +41,52 @@
         <div class="sidebar-header">
             <div class="sidebar-title-row">
                 <span class="sidebar-title">Direktori</span>
-                <div class="sidebar-quick-actions">
-                    <button class="icon-btn" onclick="openNewFolderModal()" title="Buat Folder Baru" style="padding:4px 8px;font-size:11px;">&#43; Folder</button>
-                    <button class="icon-btn btn-primary" onclick="openNewNoteModal()" title="Buat Catatan Baru" style="padding:4px 8px;font-size:11px;">&#43; Note</button>
-                    <button type="button" class="icon-btn sidebar-close-btn" id="sidebar-close-btn" title="Tutup / Minimize Sidebar" style="padding:4px 7px;font-size:11px;" aria-label="Tutup Sidebar">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <div class="sidebar-header-tools">
+                    <button type="button" class="sidebar-tool-btn" onclick="expandAllFolders()" title="Buka Semua Folder" aria-label="Buka Semua Folder">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="7 13 12 18 17 13"></polyline>
+                            <polyline points="7 6 12 11 17 6"></polyline>
+                        </svg>
+                    </button>
+                    <button type="button" class="sidebar-tool-btn" onclick="collapseAllFolders()" title="Tutup Semua Folder" aria-label="Tutup Semua Folder">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="17 11 12 6 7 11"></polyline>
+                            <polyline points="17 18 12 13 7 18"></polyline>
+                        </svg>
+                    </button>
+                    <button type="button" class="sidebar-tool-btn sidebar-close-btn" id="sidebar-close-btn" title="Tutup / Minimize Sidebar (Ctrl+B)" aria-label="Tutup Sidebar">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="15 18 9 12 15 6"></polyline>
                         </svg>
                     </button>
                 </div>
             </div>
+
+            <div class="sidebar-create-actions">
+                <button type="button" class="sidebar-btn-create primary" onclick="openNewNoteModal()" title="Buat Catatan Baru">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    <span>Catatan</span>
+                </button>
+                <button type="button" class="sidebar-btn-create secondary" onclick="openNewFolderModal()" title="Buat Folder Baru">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                        <line x1="12" y1="11" x2="12" y2="17"></line>
+                        <line x1="9" y1="14" x2="15" y2="14"></line>
+                    </svg>
+                    <span>Folder</span>
+                </button>
+            </div>
+
             <div class="sidebar-search">
-                <input type="text" id="tree-search" placeholder="Cari folder atau catatan..." onkeyup="filterTree(this.value)">
+                <svg class="search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="tree-search" placeholder="Cari folder atau catatan..." onkeyup="filterTree(this.value)" autocomplete="off" spellcheck="false">
+                <button type="button" class="search-clear-btn" id="search-clear-btn" title="Hapus pencarian" onclick="clearSearch()" style="display:none;" aria-label="Hapus pencarian">&times;</button>
             </div>
         </div>
 
