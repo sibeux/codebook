@@ -198,8 +198,14 @@
                     {{ ($activeNote && $activeNote->is_public) ? 'Publik' : 'Pribadi' }}
                 </span>
             </button>
-            <button class="icon-btn" id="clear-btn" style="justify-content:center;" onclick="clearCurrentNoteMessages()">Clear chat</button>
-            <button class="icon-btn" style="color:var(--danger);justify-content:center;" onclick="deleteCurrentNote()" title="Hapus Catatan">&#128465;</button>
+            <button class="icon-btn" id="clear-btn" style="justify-content:center;gap:6px;" onclick="clearCurrentNoteMessages()" title="Kosongkan semua pesan di catatan ini">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"></path>
+                    <path d="M22 21H7"></path>
+                    <path d="m5 11 9 9"></path>
+                </svg>
+                <span>Kosongkan Chat</span>
+            </button>
         </div>
     </div>
 </main>
