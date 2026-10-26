@@ -42,6 +42,9 @@
   --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.6);
   --code-bg: #141414;
   --code-inline-bg: rgba(255, 255, 255, 0.08);
+  --tree-indent-line: rgba(255, 255, 255, 0.2);
+  --tree-indent-line-hover: rgba(255, 255, 255, 0.42);
+  --tree-indent-line-active: rgba(217, 119, 6, 0.55);
 }
 
 [data-theme="light"] {
@@ -86,6 +89,9 @@
   --shadow-lg: 0 16px 24px -4px rgba(0, 0, 0, 0.08);
   --code-bg: #EFECE6;
   --code-inline-bg: #E7E4DC;
+  --tree-indent-line: rgba(0, 0, 0, 0.18);
+  --tree-indent-line-hover: rgba(0, 0, 0, 0.38);
+  --tree-indent-line-active: rgba(180, 83, 9, 0.55);
 }
 
 * { box-sizing: border-box; }
@@ -560,7 +566,7 @@ main {
 }
 
 .tree-note .tree-label {
-  padding-left: 20px;
+  padding-left: 24px;
 }
 
 .folder-toggle-btn {
@@ -603,12 +609,21 @@ main {
 }
 
 .tree-children {
-  margin-left: 14px;
-  padding-left: 6px;
-  border-left: 1px dashed var(--border);
+  margin-left: 17px;
+  padding-left: 8px;
+  border-left: 1.5px solid var(--tree-indent-line);
   display: flex;
   flex-direction: column;
   gap: 2px;
+  transition: border-color 0.15s ease;
+}
+
+.tree-folder-group:hover > .tree-children {
+  border-left-color: var(--tree-indent-line-hover);
+}
+
+.tree-folder-group:has(.tree-note.active) > .tree-children {
+  border-left-color: var(--tree-indent-line-active);
 }
 
 .tree-folder.collapsed + .tree-children {
