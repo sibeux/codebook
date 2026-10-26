@@ -1745,6 +1745,78 @@ function clearSearch() {
 window.clearSearch = clearSearch;
 
 // Modals
+let currentChoiceFolderId = null;
+
+function openFolderAddChoiceModal(folderId, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    currentChoiceFolderId = folderId;
+
+    const group = document.querySelector(`.tree-folder-group[data-folder-id="${folderId}"]`);
+    const folderNameEl = group ? group.querySelector(':scope > .tree-folder .folder-name') : null;
+    const folderName = folderNameEl ? folderNameEl.textContent.trim() : 'Folder';
+    const depth = group ? parseInt(group.getAttribute('data-depth') || '1', 10) : 1;
+
+    const targetNameEl = document.getElementById('choice-modal-folder-name');
+    if (targetNameEl) {
+        targetNameEl.textContent = folderName;
+    }
+
+    const folderBtn = document.getElementById('choice-folder-btn');
+    const folderDesc = document.getElementById('choice-folder-desc');
+
+    if (depth >= 10) {
+        if (folderBtn) {
+            folderBtn.disabled = true;
+            folderBtn.classList.add('disabled');
+        }
+        if (folderDesc) {
+            folderDesc.textContent = 'Maksimal kedalaman folder (level 10) tercapai.';
+        }
+    } else {
+        if (folderBtn) {
+            folderBtn.disabled = false;
+            folderBtn.classList.remove('disabled');
+        }
+        if (folderDesc) {
+            folderDesc.textContent = 'Buat subfolder untuk mengelompokkan catatan';
+        }
+    }
+
+    const modal = document.getElementById('folderAddChoiceModal');
+    if (modal) {
+        modal.classList.add('active');
+        const noteBtn = document.getElementById('choice-note-btn');
+        if (noteBtn) setTimeout(() => noteBtn.focus(), 50);
+    }
+}
+
+function chooseAddNote() {
+    const folderId = currentChoiceFolderId;
+    closeModal('folderAddChoiceModal');
+    if (folderId) {
+        openNewNoteModal(folderId);
+    } else {
+        openNewNoteModal();
+    }
+}
+
+function chooseAddFolder() {
+    const folderId = currentChoiceFolderId;
+    closeModal('folderAddChoiceModal');
+    if (folderId) {
+        openNewFolderModal(folderId);
+    } else {
+        openNewFolderModal();
+    }
+}
+
+window.openFolderAddChoiceModal = openFolderAddChoiceModal;
+window.chooseAddNote = chooseAddNote;
+window.chooseAddFolder = chooseAddFolder;
+
 function openNewFolderModal(parentId = null) {
     const parentInput = document.getElementById('folder-parent-id');
     const parentSelect = document.getElementById('folder-parent-select');
@@ -1765,8 +1837,8 @@ function openNewFolderModal(parentId = null) {
 function openNewNoteModal(folderId = null) {
     document.getElementById('note-title-modal-input').value = '';
     const select = document.getElementById('note-folder-select');
-    if (select && folderId) {
-        select.value = folderId;
+    if (select) {
+        select.value = folderId ? String(folderId) : '';
     }
     document.getElementById('newNoteModal').classList.add('active');
     setTimeout(() => document.getElementById('note-title-modal-input').focus(), 50);
@@ -1841,9 +1913,8 @@ async function submitNewFolder(e) {
                             <span class="folder-name">${data.folder.name}</span>
                         </div>
                         <div class="item-actions" onclick="event.stopPropagation()">
-                            ${depth < 10 ? `<button class="mini-btn" title="Tambah Subfolder" onclick="openNewFolderModal(${data.folder.id})">&#43; folder</button>` : ''}
-                            <button class="mini-btn" title="Tambah Catatan di Folder ini" onclick="openNewNoteModal(${data.folder.id})">&#43; note</button>
-                            <button class="mini-btn danger" title="Hapus Folder" onclick="deleteFolder(${data.folder.id})">&times;</button>
+                            <button type="button" class="mini-btn" title="Tambah catatan atau subfolder" onclick="openFolderAddChoiceModal(${data.folder.id}, event)">&#43;</button>
+                            <button type="button" class="mini-btn danger" title="Hapus Folder" onclick="deleteFolder(${data.folder.id})">&times;</button>
                         </div>
                     </div>
                     <div class="tree-children">
@@ -2462,34 +2533,10 @@ async function moveNoteToFolder(noteId, targetFolderId) {
     }
 }
 
-// Recursively update depth attribute and + folder button on tree groups
+// Recursively update depth attribute on tree groups
 function updateGroupDepth(groupEl, newDepth) {
     if (!groupEl) return;
     groupEl.setAttribute('data-depth', newDepth);
-
-    const folderHeader = groupEl.querySelector(':scope > .tree-folder');
-    if (folderHeader) {
-        const actions = folderHeader.querySelector('.item-actions');
-        if (actions) {
-            let addFolderBtn = actions.querySelector('button[title="Tambah Subfolder"]');
-            if (newDepth >= 10) {
-                if (addFolderBtn) addFolderBtn.remove();
-            } else if (!addFolderBtn) {
-                const folderId = groupEl.getAttribute('data-folder-id');
-                const noteBtn = actions.querySelector('button[title^="Tambah Catatan"]');
-                const newBtn = document.createElement('button');
-                newBtn.className = 'mini-btn';
-                newBtn.title = 'Tambah Subfolder';
-                newBtn.setAttribute('onclick', `openNewFolderModal(${folderId})`);
-                newBtn.innerHTML = '&#43; folder';
-                if (noteBtn) {
-                    actions.insertBefore(newBtn, noteBtn);
-                } else {
-                    actions.prepend(newBtn);
-                }
-            }
-        }
-    }
 
     const childrenContainer = groupEl.querySelector(':scope > .tree-children');
     if (childrenContainer) {

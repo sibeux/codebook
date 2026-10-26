@@ -534,14 +534,19 @@ main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
+  height: 30px;
+  min-height: 30px;
+  max-height: 30px;
+  padding: 0 8px 0 5px;
+  border-left: 3px solid transparent;
+  box-sizing: border-box;
   border-radius: 6px;
   font-size: 13px;
   cursor: pointer;
   color: var(--text-secondary);
   text-decoration: none;
   user-select: none;
-  transition: all 0.12s ease;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
 .tree-folder:hover, .tree-note:hover {
@@ -553,13 +558,22 @@ main {
   background: var(--active-item-bg);
   color: var(--me);
   font-weight: 600;
-  border-left: 3px solid var(--me);
+  border-left-color: var(--me);
 }
 
 .tree-label {
   display: flex;
   align-items: center;
   gap: 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+.folder-name, .note-title-text {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -642,12 +656,14 @@ main {
 .item-actions {
   display: none;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  flex-shrink: 0;
+  height: 100%;
 }
 
 .tree-folder:hover .item-actions,
 .tree-note:hover .item-actions {
-  display: flex;
+  display: inline-flex;
 }
 
 .mini-btn {
@@ -655,10 +671,18 @@ main {
   border: none;
   color: var(--muted);
   cursor: pointer;
-  padding: 2px 5px;
-  font-size: 11.5px;
+  padding: 0;
+  min-width: 20px;
+  height: 20px;
+  font-size: 13px;
   border-radius: 4px;
-  transition: all 0.12s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: color 0.12s ease, background-color 0.12s ease;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .mini-btn:hover {
@@ -1551,6 +1575,127 @@ body.is-drag-active .root-dropzone {
   color: var(--text-secondary);
   margin: 0;
   word-break: break-word;
+}
+
+/* Folder Add Item Choice Modal */
+.choice-modal {
+  max-width: 420px;
+  padding: 22px 24px;
+  gap: 16px;
+  animation: confirmPopIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.choice-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.choice-modal-subtitle {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.choice-modal-subtitle strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.choice-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.choice-option-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+  color: var(--text);
+  text-decoration: none;
+  width: 100%;
+  font-family: inherit;
+}
+
+.choice-option-btn:hover:not(:disabled):not(.disabled) {
+  background: var(--panel-hover);
+  border-color: var(--me);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.choice-option-btn:active:not(:disabled):not(.disabled) {
+  transform: translateY(0);
+}
+
+.choice-option-btn:focus-visible {
+  outline: none;
+  border-color: var(--me);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.choice-option-btn:disabled,
+.choice-option-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: var(--border);
+  background: var(--panel);
+}
+
+.choice-option-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  transition: border-color 0.15s ease;
+}
+
+.choice-option-btn:hover:not(:disabled):not(.disabled) .choice-option-icon {
+  border-color: var(--me);
+}
+
+.choice-option-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.choice-option-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.choice-option-desc {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.choice-option-arrow {
+  color: var(--muted);
+  font-size: 14px;
+  transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.choice-option-btn:hover:not(:disabled):not(.disabled) .choice-option-arrow {
+  color: var(--me);
+  transform: translateX(3px);
 }
 
 /* Login Page */

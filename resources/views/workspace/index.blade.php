@@ -276,6 +276,7 @@
 
 @include('workspace.partials.share_modal')
 @include('workspace.partials.confirm_modal')
+@include('workspace.partials.folder_choice_modal')
 
 @if ($activeNote)
     <script>

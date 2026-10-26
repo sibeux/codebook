@@ -10,11 +10,8 @@
             <span class="folder-name">{{ $folder->name }}</span>
         </div>
         <div class="item-actions" onclick="event.stopPropagation()">
-            @if (($depth ?? 1) < 10)
-                <button class="mini-btn" title="Tambah Subfolder" onclick="openNewFolderModal({{ $folder->id }})">&#43; folder</button>
-            @endif
-            <button class="mini-btn" title="Tambah Catatan di Folder ini" onclick="openNewNoteModal({{ $folder->id }})">&#43; note</button>
-            <button class="mini-btn danger" title="Hapus Folder" onclick="deleteFolder({{ $folder->id }})">&times;</button>
+            <button type="button" class="mini-btn" title="Tambah catatan atau subfolder" onclick="openFolderAddChoiceModal({{ $folder->id }}, event)">&#43;</button>
+            <button type="button" class="mini-btn danger" title="Hapus Folder" onclick="deleteFolder({{ $folder->id }})">&times;</button>
         </div>
     </div>
 
