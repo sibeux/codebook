@@ -1379,6 +1379,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
+    let currentNoteRequestId = 0;
+
     // SPA Note Selection (No full page reload)
     window.selectNote = async function (noteId, e) {
         if (e) {
@@ -1386,10 +1388,27 @@ document.addEventListener('DOMContentLoaded', function () {
             e.stopPropagation();
         }
 
-        // Highlight sidebar active item immediately
-        document.querySelectorAll('.tree-note').forEach(el => el.classList.remove('active'));
+        const requestId = ++currentNoteRequestId;
+
+        // Highlight sidebar active item immediately and show loading indicator
+        document.querySelectorAll('.tree-note').forEach(el => {
+            el.classList.remove('active');
+            el.classList.remove('loading');
+        });
         const activeLink = document.querySelector(`.tree-note[data-note-id="${noteId}"]`);
-        if (activeLink) activeLink.classList.add('active');
+        if (activeLink) {
+            activeLink.classList.add('active');
+            activeLink.classList.add('loading');
+        }
+
+        // Show loading animations
+        const loadingBar = document.getElementById('thread-loading-bar');
+        const threadOverlay = document.getElementById('thread-loader-overlay');
+        const composerEl = document.getElementById('composer');
+
+        if (loadingBar) loadingBar.classList.add('active');
+        if (threadOverlay) threadOverlay.classList.add('active');
+        if (composerEl) composerEl.classList.add('loading');
 
         try {
             const res = await fetch(`/notes/${noteId}`, {
@@ -1398,6 +1417,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
             const data = await res.json();
+
+            // Discard response if user already clicked another note in the meantime
+            if (requestId !== currentNoteRequestId) {
+                return;
+            }
+
             if (data.success && data.note) {
                 window.CURRENT_NOTE = data.note;
                 messages = data.note.messages || [];
@@ -1426,6 +1451,13 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         } catch (err) {
             console.error('Failed to load note:', err);
+        } finally {
+            if (requestId === currentNoteRequestId) {
+                if (activeLink) activeLink.classList.remove('loading');
+                if (loadingBar) loadingBar.classList.remove('active');
+                if (threadOverlay) threadOverlay.classList.remove('active');
+                if (composerEl) composerEl.classList.remove('loading');
+            }
         }
     };
 

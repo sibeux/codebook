@@ -137,16 +137,27 @@
     </aside>
 
     <!-- Center: Chat-like Markdown Thread -->
-    <div id="thread">
-        <div class="empty-state" id="no-note-state" style="{{ $activeNote ? 'display:none;' : '' }}">
-            <div class="glyph">&gt;_</div>
-            <p>Tidak ada catatan yang dipilih. Pilih catatan dari panel kiri atau buat catatan baru.</p>
-            <button class="icon-btn btn-primary" onclick="openNewNoteModal()" style="margin:16px auto 0;">&#43; Buat Catatan Pertama</button>
+    <div class="thread-container" id="thread-container">
+        <div class="thread-loading-bar" id="thread-loading-bar"></div>
+
+        <div id="thread">
+            <div class="empty-state" id="no-note-state" style="{{ $activeNote ? 'display:none;' : '' }}">
+                <div class="glyph">&gt;_</div>
+                <p>Tidak ada catatan yang dipilih. Pilih catatan dari panel kiri atau buat catatan baru.</p>
+                <button class="icon-btn btn-primary" onclick="openNewNoteModal()" style="margin:16px auto 0;">&#43; Buat Catatan Pertama</button>
+            </div>
+
+            <div class="empty-state" id="empty-state" style="{{ ($activeNote && $activeNote->messages->count() === 0) ? 'display:block;' : 'display:none;' }}">
+                <div class="glyph">&gt;_</div>
+                <p id="empty-state-text">Belum ada pesan di catatan <strong>"{{ $activeNote ? $activeNote->title : '' }}"</strong>. Tulis markdown di panel kanan, pilih pengirim, lalu kirim untuk melihat hasil render chat bubble.</p>
+            </div>
         </div>
 
-        <div class="empty-state" id="empty-state" style="{{ ($activeNote && $activeNote->messages->count() === 0) ? 'display:block;' : 'display:none;' }}">
-            <div class="glyph">&gt;_</div>
-            <p id="empty-state-text">Belum ada pesan di catatan <strong>"{{ $activeNote ? $activeNote->title : '' }}"</strong>. Tulis markdown di panel kanan, pilih pengirim, lalu kirim untuk melihat hasil render chat bubble.</p>
+        <div class="thread-loader-overlay" id="thread-loader-overlay" aria-live="polite">
+            <div class="thread-loader-content">
+                <div class="thread-loader-spinner"></div>
+                <span class="thread-loader-text">Membuka catatan...</span>
+            </div>
         </div>
     </div>
 
