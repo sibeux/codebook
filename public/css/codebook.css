@@ -867,6 +867,10 @@ body.is-drag-active .root-dropzone {
   flex-shrink: 0;
 }
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .thread-loader-text {
   font-size: 13px;
   font-weight: 500;
