@@ -5,6 +5,7 @@ use App\Http\Controllers\FolderController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\NoteMessageController;
 use App\Http\Controllers\ShareController;
+use App\Http\Controllers\TodoController;
 use App\Http\Controllers\WorkspaceController;
 use Illuminate\Support\Facades\Route;
 
@@ -40,4 +41,15 @@ Route::middleware('auth')->group(function () {
     Route::put('/notes/{note}/messages/{message}', [NoteMessageController::class, 'update'])->name('notes.messages.update');
     Route::delete('/notes/{note}/messages/{message}', [NoteMessageController::class, 'destroy'])->name('notes.messages.destroy');
     Route::post('/notes/{note}/clear', [NoteMessageController::class, 'clear'])->name('notes.messages.clear');
+
+    // Advanced Linear-Style To-Do
+    Route::get('/todos', [TodoController::class, 'index'])->name('todos.index');
+    Route::post('/todos/projects', [TodoController::class, 'storeProject'])->name('todos.projects.store');
+    Route::delete('/todos/projects/{project}', [TodoController::class, 'deleteProject'])->name('todos.projects.destroy');
+    Route::post('/todos', [TodoController::class, 'store'])->name('todos.store');
+    Route::get('/todos/{todo}', [TodoController::class, 'show'])->name('todos.show');
+    Route::put('/todos/{todo}', [TodoController::class, 'update'])->name('todos.update');
+    Route::delete('/todos/{todo}', [TodoController::class, 'destroy'])->name('todos.destroy');
+    Route::post('/todos/{todo}/items', [TodoController::class, 'storeItem'])->name('todos.items.store');
+    Route::delete('/todos/items/{item}', [TodoController::class, 'deleteItem'])->name('todos.items.destroy');
 });

@@ -13,6 +13,9 @@
         </button>
         <h1>Codebook</h1>
         <span>Markdown Mode</span>
+        <a href="{{ route('todos.index') }}" class="icon-btn" style="text-decoration:none;margin-left:8px;font-size:12px;background:var(--panel-2);color:var(--text);border:1px solid var(--border);" title="Open Tasks & Projects">
+            &#x2714; Tasks
+        </a>
     </div>
 
     <div class="header-actions">
