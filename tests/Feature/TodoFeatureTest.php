@@ -89,6 +89,25 @@ class TodoFeatureTest extends TestCase
         $this->assertDatabaseHas('todo_items', ['content' => 'docker compose up -d redis', 'type' => 'command']);
     }
 
+    public function test_new_task_form_shows_the_current_project_context(): void
+    {
+        $user = $this->makeUser();
+        $project = TodoProject::create([
+            'user_id' => $user->user_id,
+            'name' => 'Current project',
+            'color' => '#3b82f6',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('todos.index', ['project_id' => $project->id]));
+
+        $response->assertOk();
+        $response->assertSee('Adding to project:');
+        $response->assertSee('Current project');
+        $response->assertSee('<option value="'.$project->id.'" selected>', false);
+        $response->assertSee('Tasks');
+        $response->assertSee('/ Current project');
+    }
+
     public function test_updating_status_preserves_existing_description(): void
     {
         $user = $this->makeUser();
@@ -107,6 +126,25 @@ class TodoFeatureTest extends TestCase
             'id' => $todo->id,
             'description' => 'This description must remain.',
             'status' => 'in_progress',
+        ]);
+    }
+
+    public function test_user_can_update_a_task_title(): void
+    {
+        $user = $this->makeUser();
+        $todo = Todo::create([
+            'user_id' => $user->user_id,
+            'title' => 'Original title',
+        ]);
+
+        $response = $this->actingAs($user)->putJson(route('todos.update', $todo), [
+            'title' => 'Updated title',
+        ]);
+
+        $response->assertOk()->assertJsonPath('todo.title', 'Updated title');
+        $this->assertDatabaseHas('todos', [
+            'id' => $todo->id,
+            'title' => 'Updated title',
         ]);
     }
 

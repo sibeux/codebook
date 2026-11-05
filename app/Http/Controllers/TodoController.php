@@ -30,8 +30,11 @@ class TodoController extends Controller
                 $q->latest();
             }]);
 
-        if ($request->filled('project_id')) {
-            $query->where('todo_project_id', $request->integer('project_id'));
+        $currentProjectId = $request->integer('project_id');
+        $currentProject = $projects->firstWhere('id', $currentProjectId);
+
+        if ($currentProject) {
+            $query->where('todo_project_id', $currentProject->id);
         }
 
         if ($request->filled('status')) {
@@ -46,12 +49,12 @@ class TodoController extends Controller
             ? $request->integer('active')
             : $todos->first()?->id;
         $activeTodo = $todos->firstWhere('id', $activeTodoId) ?? $todos->first();
-
         return view('todos.index', [
             'projects' => $projects,
             'todos' => $todos,
             'activeTodo' => $activeTodo,
-            'currentProjectId' => $request->project_id,
+            'currentProjectId' => $currentProject?->id,
+            'currentProject' => $currentProject,
             'currentStatus' => $request->status,
         ]);
     }
