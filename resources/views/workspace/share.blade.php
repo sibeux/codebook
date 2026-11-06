@@ -462,11 +462,13 @@
                     const maxH = 460;
                     const toggleBtn = tools.querySelector('.toggle-btn');
                     if (scrollH > maxH + 40) {
-                        mdWrap.classList.add('collapsed');
+                        mdDiv.classList.add('collapsed');
+                        fade.style.display = 'block';
                         if (toggleBtn) {
                             toggleBtn.style.display = 'inline-block';
                             toggleBtn.addEventListener('click', function () {
-                                const isCollapsed = mdWrap.classList.toggle('collapsed');
+                                const isCollapsed = mdDiv.classList.toggle('collapsed');
+                                fade.style.display = isCollapsed ? 'block' : 'none';
                                 toggleBtn.innerHTML = isCollapsed ? '&#8964; tampilkan semua' : '&#8963; ciutkan';
                             });
                         }
