@@ -131,6 +131,9 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 }
 .board-column-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
 .board-column-title { font-size: 11.5px; font-weight: 700; color: var(--text); flex: 1; }
+.board-column-title[role="button"] { cursor: text; }
+.board-column-title[role="button"]:focus-visible { outline: 2px solid var(--todo-accent); outline-offset: 3px; border-radius: 3px; }
+.board-column-title-input { flex: 1; min-width: 0; padding: 2px 5px; border: 1px solid var(--todo-accent); border-radius: 5px; background: var(--panel); color: var(--text); font: inherit; outline: none; }
 .board-column-count { font-size: 10px; font-weight: 700; color: var(--muted); background: var(--panel-2); border: 1px solid var(--border); border-radius: 7px; padding: 2px 7px; font-variant-numeric: tabular-nums; }
 .board-column-add { border: 0; background: transparent; color: var(--muted); width: 24px; height: 24px; border-radius: 6px; font-size: 18px; cursor: pointer; line-height: 1; }
 .board-column-add:hover { color: var(--text); background: var(--panel-hover); }
@@ -253,55 +256,6 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
     flex-shrink: 0;
     font-variant-numeric: tabular-nums;
 }
-
-/* ---- Status Filter Chips ---- */
-.status-filter-section {
-    padding: 14px 12px 16px;
-    border-top: 1px solid var(--border);
-    flex-shrink: 0;
-}
-
-.status-filter-label {
-    display: flex;
-    align-items: center;
-    gap: 7px;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .1em;
-    color: var(--muted);
-    margin-bottom: 10px;
-}
-
-.status-filter-label svg { color: var(--todo-accent); }
-
-.status-filter-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.status-chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 30px;
-    font-size: 11px;
-    padding: 0 11px;
-    border-radius: 8px;
-    border: 1px solid transparent;
-    text-decoration: none;
-    color: var(--muted);
-    background: var(--panel-2);
-    transition: color var(--todo-transition), background var(--todo-transition), border-color var(--todo-transition), transform var(--todo-transition);
-    font-weight: 600;
-    white-space: nowrap;
-}
-
-.status-chip:hover { background: var(--panel-hover); color: var(--text); border-color: var(--border-hover); }
-.status-chip:active { transform: scale(.97); }
-.status-chip.active { background: var(--todo-accent-soft); color: var(--todo-accent); border-color: var(--todo-accent-muted); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--todo-accent) 12%, transparent); }
-.status-chip:focus-visible { outline: 2px solid var(--todo-accent); outline-offset: 2px; }
 
 /* ---- Task Cards ---- */
 .task-list-scroll {
@@ -1019,7 +973,6 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
     .pane-projects > .pane-header { height: 42px; }
     .project-list-scroll { display: flex; flex: 0 0 auto; flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 6px 8px; gap: 4px; max-height: 48px; }
     .project-section-label { display: none; }
-    .status-filter-section { display: none; }
     .project-link { white-space: nowrap; flex-shrink: 0; }
     .pane-list { flex: 0 0 390px; width: 100%; border-right: none; }
     .board-header { height: 48px; padding-inline: 14px; }
@@ -1067,7 +1020,7 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 </header>
 
 {{-- ===== 3-COLUMN SHELL ===== --}}
-<div class="todo-shell {{ $detailOnly ? 'todo-detail-shell' : '' }}" data-active-todo-id="{{ $activeTodo?->id ?? '' }}" data-project-id="{{ $currentProjectId ?? '' }}" data-status-filter="{{ $currentStatus ?? '' }}">
+<div class="todo-shell {{ $detailOnly ? 'todo-detail-shell' : '' }}" data-active-todo-id="{{ $activeTodo?->id ?? '' }}" data-project-id="{{ $currentProjectId ?? '' }}">
 
     @if(!$detailOnly)
     {{-- ===== PANE 1: PROJECTS ===== --}}
@@ -1081,14 +1034,6 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
         </div>
 
         <div class="project-list-scroll">
-            <a href="{{ route('todos.index', ['status' => request('status')]) }}" onclick="return navigateTodo(event, this)" class="project-link {{ !$currentProject ? 'active' : '' }}">
-                <span class="project-link-left">
-                    <span class="project-dot" style="background:#94a3b8;"></span>
-                    <span class="project-link-name">All Tasks</span>
-                </span>
-                <span class="project-count-badge">{{ $todos->count() }}</span>
-            </a>
-
             <div class="project-section-label">My Projects</div>
 
             @forelse($projects as $p)
@@ -1107,19 +1052,6 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
             @endforelse
         </div>
 
-        <div class="status-filter-section">
-            <div class="status-filter-label">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6.5 7.5v5l-3 1.5v-6.5L4 5z"/></svg>
-                Filter by status
-            </div>
-            <div class="status-filter-chips">
-                <a href="{{ route('todos.index', array_merge(request()->query(), ['status' => null])) }}" onclick="return navigateTodo(event, this)" class="status-chip {{ !request('status') ? 'active' : '' }}">All</a>
-                <a href="{{ route('todos.index', array_merge(request()->query(), ['status' => 'todo'])) }}" onclick="return navigateTodo(event, this)" class="status-chip {{ request('status') === 'todo' ? 'active' : '' }}">Todo</a>
-                <a href="{{ route('todos.index', array_merge(request()->query(), ['status' => 'in_progress'])) }}" onclick="return navigateTodo(event, this)" class="status-chip {{ request('status') === 'in_progress' ? 'active' : '' }}">In Progress</a>
-                <a href="{{ route('todos.index', array_merge(request()->query(), ['status' => 'blocked'])) }}" onclick="return navigateTodo(event, this)" class="status-chip {{ request('status') === 'blocked' ? 'active' : '' }}">Blocked</a>
-                <a href="{{ route('todos.index', array_merge(request()->query(), ['status' => 'done'])) }}" onclick="return navigateTodo(event, this)" class="status-chip {{ request('status') === 'done' ? 'active' : '' }}">Done</a>
-            </div>
-        </div>
     </aside>
 
     {{-- ===== PANE 2: STATUS BOARD ===== --}}
@@ -1143,7 +1075,8 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
                 <section class="board-column" data-list-id="{{ $column->id }}" data-status="{{ $column->system_status ?? '' }}" ondragover="allowTodoDrop(event)" ondragleave="leaveTodoDrop(event)" ondrop="dropTodoCard(event, {{ $column->id }})" aria-label="{{ $column->name }} list">
                     <header class="board-column-header">
                         <span class="board-column-dot" style="background:{{ $column->color }};"></span>
-                        <span class="board-column-title">{{ $column->name }}</span>
+                        <span class="board-column-title" id="todo-list-title-{{ $column->id }}" role="button" tabindex="0" aria-label="Edit {{ $column->name }} list name" onclick="editTodoListName(event, {{ $column->id }})" onkeydown="editTodoListName(event, {{ $column->id }})">{{ $column->name }}</span>
+                        <input class="board-column-title-input" id="todo-list-title-input-{{ $column->id }}" type="text" maxlength="80" value="{{ $column->name }}" aria-label="New list name" style="display:none;" onblur="saveTodoListName({{ $column->id }})" onkeydown="handleTodoListNameKeydown(event)">
                         <span class="board-column-count">{{ $columnTodos->count() }}</span>
                         <button class="board-column-add" type="button" onclick="openNewTaskModal({{ $column->id }})" aria-label="Add card to {{ $column->name }}">+</button>
                         @if($column->system_status === null)
@@ -1433,9 +1366,7 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     let activeTodoId = {{ $activeTodo ? $activeTodo->id : 'null' }};
     let currentProjectId = @json($currentProjectId ? (int) $currentProjectId : null);
-    let activeStatusFilter = @json($currentStatus);
     const todoSystemListIds = @json($todoLists->whereNotNull('system_status')->pluck('id', 'system_status'));
-    const todoListStatuses = @json($todoLists->pluck('system_status', 'id'));
     const todoIndexPath = new URL("{{ route('todos.index') }}", window.location.origin).pathname;
     let todoLoadingRequests = 0;
     let todoLoadingHideTimer;
@@ -1576,7 +1507,6 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 
             activeTodoId = Number(nextShell.dataset.activeTodoId) || null;
             currentProjectId = Number(nextShell.dataset.projectId) || null;
-            activeStatusFilter = nextShell.dataset.statusFilter || null;
 
             if (pushState) {
                 window.history.pushState({}, '', url);
@@ -1671,6 +1601,91 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
         }
     }
 
+    function editTodoListName(event, todoListId) {
+        if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') {
+            return;
+        }
+
+        event.preventDefault();
+        const title = document.getElementById(`todo-list-title-${todoListId}`);
+        const input = document.getElementById(`todo-list-title-input-${todoListId}`);
+
+        if (!title || !input || input.dataset.saving === 'true') {
+            return;
+        }
+
+        input.dataset.originalName = title.textContent.trim();
+        input.value = input.dataset.originalName;
+        title.hidden = true;
+        input.style.display = 'block';
+        input.focus();
+        input.select();
+    }
+
+    function handleTodoListNameKeydown(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            event.currentTarget.blur();
+        }
+
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            const input = event.currentTarget;
+            input.value = input.dataset.originalName || '';
+            input.dataset.cancelled = 'true';
+            input.blur();
+        }
+    }
+
+    async function saveTodoListName(todoListId) {
+        const title = document.getElementById(`todo-list-title-${todoListId}`);
+        const input = document.getElementById(`todo-list-title-input-${todoListId}`);
+
+        if (!title || !input || input.dataset.saving === 'true') {
+            return;
+        }
+
+        const originalName = input.dataset.originalName || title.textContent.trim();
+        const nextName = input.value.trim();
+        const wasCancelled = input.dataset.cancelled === 'true';
+        delete input.dataset.cancelled;
+        title.hidden = false;
+        input.style.display = 'none';
+
+        if (wasCancelled || !nextName || nextName === originalName) {
+            input.value = originalName;
+            return;
+        }
+
+        input.dataset.saving = 'true';
+        title.textContent = nextName;
+
+        try {
+            const response = await fetch(`/todos/lists/${todoListId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify({ name: nextName })
+            });
+            const payload = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                const message = payload.message || Object.values(payload.errors || {}).flat()[0] || 'List name could not be saved.';
+                throw new Error(message);
+            }
+
+            title.textContent = payload.list.name;
+            title.setAttribute('aria-label', `Edit ${payload.list.name} list name`);
+            input.value = payload.list.name;
+        } catch (error) {
+            title.textContent = originalName;
+            title.setAttribute('aria-label', `Edit ${originalName} list name`);
+            input.value = originalName;
+            showToast(error.message);
+        } finally {
+            delete input.dataset.saving;
+        }
+    }
+
     async function deleteTodoList(todoListId) {
         if (!confirm('Delete this list? Tasks in it will move to To do.')) {
             return;
@@ -1713,10 +1728,48 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 
     async function toggleTaskDone(todoId, isChecked) {
         const card = document.getElementById(`task-card-${todoId}`);
-        const targetListId = todoSystemListIds[isChecked ? 'done' : 'todo'];
 
-        if (card && targetListId) {
-            await moveTodoCard(card, Number(targetListId));
+        if (!card) {
+            return;
+        }
+
+        const previousStatus = card.dataset.status;
+        const status = isChecked ? 'done' : 'todo';
+        const completionSequence = Number(card.dataset.completionSequence || 0) + 1;
+
+        card.dataset.completionSequence = String(completionSequence);
+        card.dataset.status = status;
+        card.classList.toggle('done', isChecked);
+        updateProjectPendingCount(card.dataset.projectId, previousStatus === 'done', isChecked);
+
+        try {
+            const todo = await queueTodoCardUpdate(card, { status });
+
+            if (Number(card.dataset.completionSequence) === completionSequence && todo.status !== status) {
+                card.dataset.status = todo.status;
+                card.classList.toggle('done', todo.status === 'done');
+                const checkbox = card.querySelector('.task-checkbox');
+
+                if (checkbox) {
+                    checkbox.checked = todo.status === 'done';
+                }
+
+                updateProjectPendingCount(card.dataset.projectId, isChecked, todo.status === 'done');
+            }
+        } catch (error) {
+            if (Number(card.dataset.completionSequence) === completionSequence) {
+                const persistedStatus = card.dataset.persistedStatus || previousStatus;
+                card.dataset.status = persistedStatus;
+                card.classList.toggle('done', persistedStatus === 'done');
+                const checkbox = card.querySelector('.task-checkbox');
+
+                if (checkbox) {
+                    checkbox.checked = persistedStatus === 'done';
+                }
+
+                updateProjectPendingCount(card.dataset.projectId, isChecked, persistedStatus === 'done');
+                showToast(error.message);
+            }
         }
     }
 
@@ -1779,8 +1832,6 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
     function moveTodoCardBetweenColumns(card, todoListId) {
         const sourceColumn = card.closest('.board-column');
         const destinationColumn = document.querySelector(`.board-column[data-list-id="${todoListId}"]`);
-        const sourceStatus = card.dataset.status;
-        const status = destinationColumn?.dataset.status || 'todo';
 
         if (!sourceColumn || !destinationColumn || Number(card.dataset.listId) === todoListId) {
             return;
@@ -1796,13 +1847,6 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
         sourceCount.textContent = String(Math.max(0, Number(sourceCount.textContent) - 1));
         destinationCount.textContent = String(Number(destinationCount.textContent) + 1);
         card.dataset.listId = String(todoListId);
-        card.dataset.status = status;
-        card.classList.toggle('done', status === 'done');
-
-        const checkbox = card.querySelector('.task-checkbox');
-        if (checkbox) {
-            checkbox.checked = status === 'done';
-        }
 
         if (!sourceCards.querySelector('.board-task-card')) {
             const emptyState = document.createElement('div');
@@ -1811,42 +1855,17 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
             sourceCards.append(emptyState);
         }
 
-        updateProjectPendingCount(card.dataset.projectId, sourceStatus === 'done', status === 'done');
     }
 
     async function moveTodoCard(card, todoListId) {
-        const todoId = Number(card.dataset.todoId);
         const previousListId = Number(card.dataset.listId);
         const moveSequence = Number(card.dataset.moveSequence || 0) + 1;
 
         card.dataset.moveSequence = String(moveSequence);
         moveTodoCardBetweenColumns(card, todoListId);
-        const destinationColumn = document.querySelector(`.board-column[data-list-id="${todoListId}"]`);
-        const status = destinationColumn?.dataset.status || 'todo';
-
-        const saveStatus = async () => {
-            const response = await fetch(`/todos/${todoId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                body: JSON.stringify({ status, todo_list_id: todoListId })
-            });
-            const payload = await response.json().catch(() => ({}));
-
-            if (!response.ok) {
-                const message = payload.message || Object.values(payload.errors || {}).flat()[0] || 'Perubahan tidak dapat disimpan.';
-                throw new Error(message);
-            }
-
-            card.dataset.persistedStatus = payload.todo?.status || status;
-            card.dataset.persistedListId = String(payload.todo?.todo_list_id || todoListId);
-        };
-
-        const previousSave = card.todoStatusSaveQueue || Promise.resolve();
-        const currentSave = previousSave.catch(() => {}).then(saveStatus);
-        card.todoStatusSaveQueue = currentSave;
 
         try {
-            await currentSave;
+            await queueTodoCardUpdate(card, { todo_list_id: todoListId });
         } catch (error) {
             if (Number(card.dataset.moveSequence) === moveSequence) {
                 moveTodoCardBetweenColumns(card, Number(card.dataset.persistedListId || previousListId));
@@ -1855,14 +1874,39 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
         }
     }
 
-    async function updateTaskList(todoId, todoListId) {
-        const status = todoListStatuses[todoListId] || 'todo';
+    function queueTodoCardUpdate(card, changes) {
+        const todoId = Number(card.dataset.todoId);
+        const previousSave = card.todoSaveQueue || Promise.resolve();
+        const currentSave = previousSave.catch(() => {}).then(async () => {
+            const response = await fetch(`/todos/${todoId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify(changes)
+            });
+            const payload = await response.json().catch(() => ({}));
 
+            if (!response.ok) {
+                const message = payload.message || Object.values(payload.errors || {}).flat()[0] || 'Perubahan tidak dapat disimpan.';
+                throw new Error(message);
+            }
+
+            card.dataset.persistedStatus = payload.todo?.status || card.dataset.persistedStatus;
+            card.dataset.persistedListId = String(payload.todo?.todo_list_id || card.dataset.persistedListId || card.dataset.listId);
+
+            return payload.todo;
+        });
+
+        card.todoSaveQueue = currentSave;
+
+        return currentSave;
+    }
+
+    async function updateTaskList(todoId, todoListId) {
         try {
             await todoRequest(`/todos/${todoId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                body: JSON.stringify({ status, todo_list_id: Number(todoListId) })
+                body: JSON.stringify({ todo_list_id: Number(todoListId) })
             });
             await refreshTodoShell();
         } catch (error) {

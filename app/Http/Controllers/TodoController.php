@@ -70,7 +70,6 @@ class TodoController extends Controller
             'activeTodo' => null,
             'currentProjectId' => $currentProject?->id,
             'currentProject' => $currentProject,
-            'currentStatus' => $request->status,
             'detailOnly' => false,
         ]);
     }
@@ -97,6 +96,19 @@ class TodoController extends Controller
         return response()->json(['success' => true, 'list' => $todoList]);
     }
 
+    public function updateList(Request $request, TodoList $todoList): JsonResponse
+    {
+        abort_unless($todoList->user_id === $request->user()->user_id, 403);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:80'],
+        ]);
+
+        $todoList->update($validated);
+
+        return response()->json(['success' => true, 'list' => $todoList]);
+    }
+
     public function deleteList(Request $request, TodoList $todoList): JsonResponse
     {
         abort_unless($todoList->user_id === $request->user()->user_id, 403);
@@ -109,7 +121,6 @@ class TodoController extends Controller
 
         Todo::where('todo_list_id', $todoList->id)->update([
             'todo_list_id' => $defaultList->id,
-            'status' => 'todo',
         ]);
         $todoList->delete();
 
@@ -167,10 +178,6 @@ class TodoController extends Controller
             ? TodoList::findOrFail($validated['todo_list_id'])
             : TodoList::where('user_id', $request->user()->user_id)->where('system_status', $status)->firstOrFail();
 
-        if (isset($validated['todo_list_id'])) {
-            $status = $todoList->system_status ?? 'todo';
-        }
-
         $todo = Todo::create([
             'user_id' => $request->user()->user_id,
             'todo_project_id' => $validated['todo_project_id'] ?? null,
@@ -224,7 +231,6 @@ class TodoController extends Controller
             'activeTodo' => $todo,
             'currentProjectId' => $currentProjectId ?: null,
             'currentProject' => $projects->firstWhere('id', $currentProjectId),
-            'currentStatus' => $request->query('status'),
             'detailOnly' => true,
         ]);
     }
@@ -249,16 +255,6 @@ class TodoController extends Controller
                 Rule::exists('todo_lists', 'id')->where('user_id', $request->user()->user_id),
             ],
         ]);
-
-        if (array_key_exists('todo_list_id', $validated) && $validated['todo_list_id'] !== null) {
-            $todoList = TodoList::findOrFail($validated['todo_list_id']);
-            $validated['status'] = $validated['status'] ?? $todoList->system_status ?? 'todo';
-        } elseif (array_key_exists('status', $validated)) {
-            TodoList::ensureSystemLists($request->user());
-            $validated['todo_list_id'] = TodoList::where('user_id', $request->user()->user_id)
-                ->where('system_status', $validated['status'])
-                ->value('id');
-        }
 
         $todo->update($validated);
         $todo->load(['project', 'todoList', 'items']);
