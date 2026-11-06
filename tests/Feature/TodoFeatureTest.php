@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Todo;
+use App\Models\TodoItem;
 use App\Models\TodoList;
 use App\Models\TodoProject;
 use App\Models\User;
@@ -53,7 +54,106 @@ class TodoFeatureTest extends TestCase
         $response->assertSee('Selected task description');
         $response->assertDontSee('First task description');
         $response->assertSee('task-card-'.$selectedTodo->id.'"', false);
+        $response->assertSee('id="task-workspace-container"', false);
+        $response->assertSee('task-detail-columns', false);
+        $response->assertSee('Comments');
+        $response->assertSee(route('todos.index', ['active' => $selectedTodo->id]), false);
         $this->assertNotSame($firstTodo->id, $selectedTodo->id);
+    }
+
+    public function test_task_url_redirects_to_board_with_the_card_selected(): void
+    {
+        $user = $this->makeUser();
+        $todo = Todo::create([
+            'user_id' => $user->user_id,
+            'title' => 'Selected task',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('todos.show', $todo));
+
+        $response->assertRedirect(route('todos.index', ['active' => $todo->id]));
+    }
+
+    public function test_user_can_edit_a_comment_on_their_task(): void
+    {
+        $user = $this->makeUser();
+        $todo = Todo::create([
+            'user_id' => $user->user_id,
+            'title' => 'Task with comment',
+        ]);
+        $comment = TodoItem::create([
+            'todo_id' => $todo->id,
+            'user_id' => $user->user_id,
+            'type' => 'note',
+            'content' => 'Initial comment',
+        ]);
+
+        $response = $this->actingAs($user)->putJson(route('todos.items.update', $comment), [
+            'content' => 'Updated comment',
+        ]);
+
+        $response->assertOk();
+        $response->assertJsonPath('item.content', 'Updated comment');
+        $this->assertDatabaseHas('todo_items', [
+            'id' => $comment->id,
+            'content' => 'Updated comment',
+        ]);
+    }
+
+    public function test_comment_edit_rejects_empty_content(): void
+    {
+        $user = $this->makeUser();
+        $todo = Todo::create([
+            'user_id' => $user->user_id,
+            'title' => 'Task with comment',
+        ]);
+        $comment = TodoItem::create([
+            'todo_id' => $todo->id,
+            'user_id' => $user->user_id,
+            'type' => 'note',
+            'content' => 'Keep this comment',
+        ]);
+
+        $response = $this->actingAs($user)->putJson(route('todos.items.update', $comment), [
+            'content' => '',
+        ]);
+
+        $response->assertUnprocessable();
+        $this->assertDatabaseHas('todo_items', [
+            'id' => $comment->id,
+            'content' => 'Keep this comment',
+        ]);
+    }
+
+    public function test_user_cannot_edit_another_users_comment(): void
+    {
+        $owner = $this->makeUser();
+        $otherUser = User::create([
+            'email' => 'other@sibeux.my.id',
+            'name' => 'Other User',
+            'password' => bcrypt('password'),
+            'role' => 'user',
+        ]);
+        $todo = Todo::create([
+            'user_id' => $owner->user_id,
+            'title' => 'Private task',
+        ]);
+        $comment = TodoItem::create([
+            'todo_id' => $todo->id,
+            'user_id' => $owner->user_id,
+            'type' => 'note',
+            'content' => 'Private comment',
+        ]);
+
+        $response = $this->actingAs($otherUser)->putJson(route('todos.items.update', $comment), [
+            'content' => 'Changed by another user',
+        ]);
+
+        $response->assertForbidden();
+        $this->assertDatabaseHas('todo_items', [
+            'id' => $comment->id,
+            'content' => 'Private comment',
+        ]);
     }
 
     public function test_user_can_create_project_and_task(): void

@@ -54,6 +54,97 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
     background: var(--bg);
 }
 
+.todo-shell.card-modal-open { overflow: visible; }
+
+body:has(.todo-shell.card-modal-open) { overflow: hidden; }
+
+.task-modal-backdrop {
+    position: fixed;
+    inset: 52px 0 0;
+    z-index: 1100;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: rgba(8, 12, 24, .58);
+    backdrop-filter: blur(2px);
+    cursor: default;
+    animation: task-modal-backdrop-in .16s ease-out;
+}
+
+.task-modal-backdrop[hidden] { display: none; }
+
+.todo-shell.card-modal-open .pane-workspace {
+    position: fixed;
+    z-index: 1101;
+    top: calc(52px + (100vh - 52px) / 2);
+    left: 50%;
+    width: min(1120px, calc(100vw - 48px));
+    min-width: 0;
+    height: min(850px, calc(100vh - 96px));
+    max-height: calc(100vh - 96px);
+    transform: translate(-50%, -50%);
+    overflow-x: hidden;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--bg);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .36);
+    animation: task-modal-in .18s cubic-bezier(.2,.8,.2,1);
+}
+
+.task-modal-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 38px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--bg) 94%, transparent);
+    backdrop-filter: blur(12px);
+}
+
+.task-modal-toolbar-label {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.task-modal-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    color: var(--muted);
+    background: transparent;
+    cursor: pointer;
+}
+
+.task-modal-close:hover,
+.task-modal-close:focus-visible {
+    color: var(--text);
+    background: var(--panel-2);
+    border-color: var(--border);
+}
+
+.task-modal-close:focus-visible { outline: 2px solid var(--todo-accent); outline-offset: 2px; }
+
+@keyframes task-modal-backdrop-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes task-modal-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 8px)) scale(.99); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .task-modal-backdrop,
+    .todo-shell.card-modal-open .pane-workspace { animation: none; }
+}
+
 /* ---- Panes ---- */
 .pane-projects,
 .pane-list,
@@ -382,24 +473,15 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 
 .task-title-label {
     display: inline;
-    position: relative;
+    text-decoration: none;
 }
 
-.task-title-label::after {
-    background: currentColor;
-    content: '';
-    height: 1.5px;
-    left: 0;
-    pointer-events: none;
-    position: absolute;
-    top: 52%;
-    transform: scaleX(0);
-    transform-origin: left center;
-    transition: transform .22s cubic-bezier(.22,1,.36,1);
-    width: 100%;
+.task-card.done .task-title-label {
+    text-decoration: line-through;
+    text-decoration-color: currentColor;
+    text-decoration-skip-ink: none;
+    text-decoration-thickness: 1.5px;
 }
-
-.task-card.done .task-title-label::after { transform: scaleX(1); }
 
 .task-card-meta {
     display: flex;
@@ -444,6 +526,119 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
     max-width: 800px;
     width: 100%;
 }
+
+.todo-shell.card-modal-open .task-workspace-content {
+    display: flex;
+    box-sizing: border-box;
+    flex-direction: column;
+    width: 100%;
+    max-width: none;
+    min-height: 100%;
+    padding: 0;
+}
+
+.task-detail-columns {
+    display: grid;
+    grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr);
+    align-items: stretch;
+    flex: 1;
+    min-height: 0;
+}
+
+.task-detail-left-column {
+    min-width: 0;
+    padding: 12px 16px 16px;
+    border-right: 1px solid var(--border);
+}
+
+.task-description-section { min-height: 0; padding-bottom: 14px !important; border-bottom: 1px solid var(--border) !important; margin-bottom: 14px !important; }
+.todo-shell.card-modal-open .task-detail-left-column .ws-section {
+    padding: 0;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.todo-shell.card-modal-open .task-detail-left-column .ws-section:first-child {
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.todo-shell.card-modal-open .task-comments-section {
+    display: flex;
+    box-sizing: border-box;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 100%;
+    padding: 14px 16px;
+    margin: 0;
+    border: 0;
+    border-left: 1px solid var(--border);
+    border-radius: 0;
+    background: color-mix(in srgb, var(--panel) 88%, var(--text));
+}
+
+.todo-shell.card-modal-open .ws-header-card {
+    padding: 0 0 12px;
+    margin-bottom: 12px;
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+.todo-shell.card-modal-open .ws-header-top { gap: 10px; }
+.todo-shell.card-modal-open .ws-header-badges { margin-bottom: 6px; }
+.todo-shell.card-modal-open .ws-section { padding: 14px 15px; margin-bottom: 10px; }
+.todo-shell.card-modal-open .ws-section-header { margin-bottom: 10px; }
+.todo-shell.card-modal-open .task-description-section { padding: 0 0 14px; margin: 0 0 14px; }
+.todo-shell.card-modal-open .task-comments-section { padding: 14px 16px; margin: 0; }
+.todo-shell.card-modal-open #thread-stream-container { flex: 1; min-height: 0; overflow-y: auto; }
+.thread-entry-actions { display: inline-flex; align-items: center; gap: 4px; }
+
+.thread-edit-btn,
+.thread-delete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 6px;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    color: var(--muted);
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    font-size: 11px;
+    transition: color var(--todo-transition), background var(--todo-transition), border-color var(--todo-transition);
+}
+
+.thread-edit-btn:hover { color: var(--todo-accent); background: var(--todo-accent-soft); border-color: var(--todo-accent-muted); }
+.thread-delete-btn:hover { color: #f87171; background: rgba(239,68,68,.08); border-color: rgba(239,68,68,.2); }
+
+.thread-edit-wrap[hidden] { display: none; }
+.thread-edit-textarea {
+    width: 100%;
+    min-height: 96px;
+    padding: 9px 10px;
+    border: 1px solid var(--todo-accent-muted);
+    border-radius: 7px;
+    color: var(--text);
+    background: var(--panel);
+    font: inherit;
+    font-size: 12px;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+}
+
+.thread-edit-textarea:focus { border-color: var(--todo-accent); box-shadow: 0 0 0 3px var(--todo-accent-soft); }
+.thread-edit-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 7px; }
+.thread-edit-actions button { height: 27px; padding: 0 9px; font-size: 11px; }
 
 .ws-empty-state {
     flex: 1;
@@ -588,22 +783,31 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 
 /* Edit title btn */
 .ws-edit-title-btn {
-    background: transparent;
-    border: 1px solid transparent;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--panel);
+    border: 1px solid var(--border);
     border-radius: var(--todo-radius-sm);
-    color: var(--muted);
+    color: var(--text-secondary);
     cursor: pointer;
-    font-size: 11px;
+    font-size: 11.5px;
+    font-weight: 600;
     font-family: 'Inter', sans-serif;
-    padding: 2px 7px;
+    padding: 6px 9px;
     transition: all var(--todo-transition);
     flex-shrink: 0;
 }
 
 .ws-edit-title-btn:hover {
-    background: var(--panel-2);
-    border-color: var(--border);
-    color: var(--text);
+    background: var(--todo-accent-soft);
+    border-color: var(--todo-accent-muted);
+    color: var(--todo-accent);
+}
+
+.ws-edit-title-btn:focus-visible {
+    outline: 2px solid var(--todo-accent);
+    outline-offset: 2px;
 }
 
 /* ---- Sections ---- */
@@ -812,7 +1016,7 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
     align-items: center;
     justify-content: center;
     padding: 20px;
-    z-index: 999;
+    z-index: 1200;
 }
 
 .todo-modal {
@@ -972,6 +1176,45 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 
 .todo-loading-bar.visible { opacity: 1; visibility: visible; }
 
+.todo-workspace-skeleton {
+    display: grid;
+    gap: 18px;
+    width: 100%;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 26px 24px;
+}
+
+.todo-skeleton-block {
+    position: relative;
+    overflow: hidden;
+    border-radius: 7px;
+    background: var(--panel-2);
+}
+
+.todo-skeleton-block::after {
+    position: absolute;
+    inset: 0;
+    content: '';
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--text) 7%, transparent), transparent);
+    animation: todo-skeleton-shimmer 1.35s ease-in-out infinite;
+}
+
+.todo-skeleton-meta { width: 42%; height: 14px; }
+.todo-skeleton-title { width: 68%; height: 30px; }
+.todo-skeleton-copy { width: 88%; height: 13px; }
+.todo-skeleton-copy.short { width: 54%; }
+.todo-skeleton-section { height: 112px; margin-top: 4px; border: 1px solid var(--border); background: var(--panel); }
+
+@keyframes todo-skeleton-shimmer {
+    100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .todo-skeleton-block::after { animation: none; }
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 1100px) {
     .pane-projects { width: 200px; min-width: 160px; }
@@ -995,6 +1238,20 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
     .pane-workspace { width: 100%; min-width: 0; min-height: 320px; border-top: 1px solid var(--border); }
     .task-workspace-content { padding: 20px 16px; }
     .ws-header-card { padding: 18px 16px; }
+    .task-modal-backdrop { inset: 0; }
+    .todo-shell.card-modal-open .pane-workspace {
+        top: 50%;
+        width: calc(100vw - 20px);
+        height: calc(100dvh - 20px);
+        max-height: calc(100dvh - 20px);
+        border-radius: 12px;
+    }
+    .todo-shell.card-modal-open .task-workspace-content { min-height: 100%; }
+    .todo-shell.card-modal-open .ws-header-card { padding-bottom: 10px; margin-bottom: 10px; }
+    .todo-shell.card-modal-open .ws-section { padding: 12px; }
+    .task-detail-columns { grid-template-columns: minmax(0, 1fr); flex: none; }
+    .task-detail-left-column { padding: 12px; border-right: 0; }
+    .todo-shell.card-modal-open .task-comments-section { min-height: 320px; padding: 12px; border-top: 1px solid var(--border); border-left: 0; }
 }
 </style>
 @endsection
@@ -1034,7 +1291,7 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 </header>
 
 {{-- ===== 3-COLUMN SHELL ===== --}}
-<div class="todo-shell {{ $detailOnly ? 'todo-detail-shell' : '' }}" data-active-todo-id="{{ $activeTodo?->id ?? '' }}" data-project-id="{{ $currentProjectId ?? '' }}">
+<div class="todo-shell {{ $detailOnly ? 'todo-detail-shell' : '' }} {{ $activeTodo ? 'card-modal-open' : '' }}" data-active-todo-id="{{ $activeTodo?->id ?? '' }}" data-project-id="{{ $currentProjectId ?? '' }}">
 
     @if(!$detailOnly)
     {{-- ===== PANE 1: PROJECTS ===== --}}
@@ -1094,12 +1351,12 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
                     </header>
                     <div class="board-column-cards">
                         @foreach($unassignedTodos as $t)
-                            <article class="task-card board-task-card {{ $t->status === 'done' ? 'done' : '' }}" id="task-card-{{ $t->id }}" data-project-id="{{ $t->todo_project_id }}" data-todo-id="{{ $t->id }}" data-list-id="" data-status="{{ $t->status }}" data-persisted-list-id="" data-persisted-status="{{ $t->status }}" draggable="true" ondragstart="startTodoDrag(event, {{ $t->id }})" ondragend="endTodoDrag(event)">
+                            <article class="task-card board-task-card {{ $t->status === 'done' ? 'done' : '' }} {{ $activeTodo?->id === $t->id ? 'active' : '' }}" id="task-card-{{ $t->id }}" data-project-id="{{ $t->todo_project_id }}" data-todo-id="{{ $t->id }}" data-list-id="" data-status="{{ $t->status }}" data-persisted-list-id="" data-persisted-status="{{ $t->status }}" draggable="true" ondragstart="startTodoDrag(event, {{ $t->id }})" ondragend="endTodoDrag(event)">
                                 <div class="task-checkbox-wrap">
                                     <input type="checkbox" class="task-checkbox" aria-label="Mark {{ $t->title }} done" {{ $t->status === 'done' ? 'checked' : '' }} onclick="event.stopPropagation(); toggleTaskDone({{ $t->id }}, this.checked)">
                                 </div>
                                 <div class="task-card-body">
-                                    <a class="task-card-link" href="{{ route('todos.show', array_merge(['todo' => $t->id], request()->query())) }}">
+                                    <a class="task-card-link" href="{{ route('todos.index', array_merge(request()->query(), ['active' => $t->id])) }}">
                                         <div class="task-title-text"><span class="task-title-label">{{ $t->title }}</span></div>
                                         <div class="task-card-meta"><span class="badge badge-{{ $t->priority }}">{{ $t->priority }}</span></div>
                                     </a>
@@ -1130,12 +1387,12 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
                     </header>
                     <div class="board-column-cards">
                         @forelse($columnTodos as $t)
-                            <article class="task-card board-task-card {{ $t->status === 'done' ? 'done' : '' }}" id="task-card-{{ $t->id }}" data-project-id="{{ $t->todo_project_id }}" data-todo-id="{{ $t->id }}" data-list-id="{{ $column->id }}" data-status="{{ $t->status }}" data-persisted-list-id="{{ $column->id }}" data-persisted-status="{{ $t->status }}" draggable="true" ondragstart="startTodoDrag(event, {{ $t->id }})" ondragend="endTodoDrag(event)">
+                            <article class="task-card board-task-card {{ $t->status === 'done' ? 'done' : '' }} {{ $activeTodo?->id === $t->id ? 'active' : '' }}" id="task-card-{{ $t->id }}" data-project-id="{{ $t->todo_project_id }}" data-todo-id="{{ $t->id }}" data-list-id="{{ $column->id }}" data-status="{{ $t->status }}" data-persisted-list-id="{{ $column->id }}" data-persisted-status="{{ $t->status }}" draggable="true" ondragstart="startTodoDrag(event, {{ $t->id }})" ondragend="endTodoDrag(event)">
                                 <div class="task-checkbox-wrap">
                                     <input type="checkbox" class="task-checkbox" aria-label="Mark {{ $t->title }} done" {{ $t->status === 'done' ? 'checked' : '' }} onclick="event.stopPropagation(); toggleTaskDone({{ $t->id }}, this.checked)">
                                 </div>
                                 <div class="task-card-body">
-                                    <a class="task-card-link" href="{{ route('todos.show', array_merge(['todo' => $t->id], request()->query())) }}">
+                                    <a class="task-card-link" href="{{ route('todos.index', array_merge(request()->query(), ['active' => $t->id])) }}">
                                         <div class="task-title-text"><span class="task-title-label">{{ $t->title }}</span></div>
                                         <div class="task-card-meta">
                                             @if($t->project)
@@ -1162,56 +1419,78 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
     @endif
 
     {{-- ===== TASK DETAIL PAGE ===== --}}
-    <main class="pane-workspace {{ $activeTodo ? '' : 'is-empty' }}" id="task-workspace-container">
+    @if($activeTodo)
+        <button class="task-modal-backdrop" id="task-modal-backdrop" type="button" onclick="closeTaskModal()" aria-label="Close card details"></button>
+    @else
+        <button class="task-modal-backdrop" id="task-modal-backdrop" type="button" onclick="closeTaskModal()" aria-label="Close card details" hidden></button>
+    @endif
+    <main class="pane-workspace {{ $activeTodo ? '' : 'is-empty' }}" id="task-workspace-container" role="{{ $activeTodo ? 'dialog' : 'region' }}" @if($activeTodo) aria-modal="true" aria-labelledby="ws-task-title" tabindex="-1" @endif>
         @if($activeTodo)
             <div class="task-workspace-content">
 
-                {{-- Header Card --}}
-                <div class="ws-header-card">
-                    <div class="ws-header-top">
-                        <div style="flex:1;min-width:0;">
-                            <div class="ws-header-badges">
-                                <span class="badge badge-{{ $activeTodo->priority }}" id="ws-badge-priority">{{ $activeTodo->priority }}</span>
-                                @if($activeTodo->project)
-                                    <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted);">
-                                        <span class="project-dot" style="background:{{ $activeTodo->project->color }};"></span>
-                                        {{ $activeTodo->project->name }}
-                                    </span>
-                                @endif
-                                <select class="ws-status-select" aria-label="Move card to list" onchange="updateTaskList({{ $activeTodo->id }}, this.value)">
-                                    <option value="" {{ $activeTodo->todo_list_id === null ? 'selected' : '' }}>Unassigned</option>
-                                    @foreach($todoLists as $todoList)
-                                        <option value="{{ $todoList->id }}" {{ $activeTodo->todo_list_id === $todoList->id ? 'selected' : '' }}>{{ $todoList->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            {{-- Title display --}}
-                            <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
-                                <h2 class="ws-task-title" id="ws-task-title">{{ $activeTodo->title }}</h2>
-                                <button type="button" class="ws-edit-title-btn" id="edit-task-title-btn" onclick="startTaskTitleEdit()">Edit</button>
-                            </div>
-
-                            {{-- Title editor --}}
-                            <div class="ws-title-edit-wrap" id="ws-task-title-editor">
-                                <input type="text" id="ws-task-title-input" class="ws-title-input" value="{{ $activeTodo->title }}" maxlength="255" aria-label="Task title">
-                                <div class="ws-title-edit-actions">
-                                    <button type="button" class="primary-btn" onclick="saveTaskTitle()" style="font-size:11.5px;height:28px;padding:0 12px;">Save</button>
-                                    <button type="button" class="icon-btn" onclick="cancelTaskTitleEdit()" style="font-size:11.5px;height:28px;">Cancel</button>
-                                </div>
-                            </div>
-
-                            <p class="ws-task-desc">{{ $activeTodo->description ?: 'No description provided.' }}</p>
-                        </div>
-
-                        <button class="ws-delete-btn" onclick="deleteActiveTask({{ $activeTodo->id }})" title="Delete Task">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-                            Delete
-                        </button>
-                    </div>
+                <div class="task-modal-toolbar">
+                    <span class="task-modal-toolbar-label">Card details</span>
+                    <button class="task-modal-close" id="close-task-modal" type="button" onclick="closeTaskModal()" aria-label="Close card details" title="Close card details">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg>
+                    </button>
                 </div>
 
-                {{-- Quick Commands --}}
+                <div class="task-detail-columns">
+                    <div class="task-detail-left-column">
+                        {{-- Header Card --}}
+                        <div class="ws-header-card">
+                            <div class="ws-header-top">
+                                <div style="flex:1;min-width:0;">
+                                    <div class="ws-header-badges">
+                                        <span class="badge badge-{{ $activeTodo->priority }}" id="ws-badge-priority">{{ $activeTodo->priority }}</span>
+                                        @if($activeTodo->project)
+                                            <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted);">
+                                                <span class="project-dot" style="background:{{ $activeTodo->project->color }};"></span>
+                                                {{ $activeTodo->project->name }}
+                                            </span>
+                                        @endif
+                                        <select class="ws-status-select" aria-label="Move card to list" onchange="updateTaskList({{ $activeTodo->id }}, this.value)">
+                                            <option value="" {{ $activeTodo->todo_list_id === null ? 'selected' : '' }}>Unassigned</option>
+                                            @foreach($todoLists as $todoList)
+                                                <option value="{{ $todoList->id }}" {{ $activeTodo->todo_list_id === $todoList->id ? 'selected' : '' }}>{{ $todoList->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+
+                                    {{-- Title display --}}
+                                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+                                        <h2 class="ws-task-title" id="ws-task-title">{{ $activeTodo->title }}</h2>
+                                        <button type="button" class="ws-edit-title-btn" id="edit-task-title-btn" onclick="startTaskTitleEdit()" aria-label="Edit task title" title="Edit task title">
+                                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
+                                            <span>Edit title</span>
+                                        </button>
+                                    </div>
+
+                                    {{-- Title editor --}}
+                                    <div class="ws-title-edit-wrap" id="ws-task-title-editor">
+                                        <input type="text" id="ws-task-title-input" class="ws-title-input" value="{{ $activeTodo->title }}" maxlength="255" aria-label="Task title">
+                                        <div class="ws-title-edit-actions">
+                                            <button type="button" class="primary-btn" onclick="saveTaskTitle()" style="font-size:11.5px;height:28px;padding:0 12px;">Save</button>
+                                            <button type="button" class="icon-btn" onclick="cancelTaskTitleEdit()" style="font-size:11.5px;height:28px;">Cancel</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button class="ws-delete-btn" onclick="deleteActiveTask({{ $activeTodo->id }})" title="Delete Task">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+
+                        <section class="ws-section task-description-section">
+                            <div class="ws-section-header">
+                                <span class="ws-section-title">Description</span>
+                            </div>
+                            <p class="ws-task-desc">{{ $activeTodo->description ?: 'No description provided.' }}</p>
+                        </section>
+
+                        {{-- Quick Commands --}}
                 <div class="ws-section">
                     <div class="ws-section-header">
                         <span class="ws-section-title">
@@ -1241,13 +1520,14 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
                         @endforelse
                     </div>
                 </div>
+                    </div>
 
-                {{-- Notes & Thread --}}
-                <div class="ws-section">
+                    {{-- Comments --}}
+                    <div class="ws-section task-comments-section">
                     <div class="ws-section-header">
                         <span class="ws-section-title">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                            Notes & Progress Thread
+                            Comments
                         </span>
                     </div>
 
@@ -1271,14 +1551,25 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
                                         <span class="thread-type-dot">{{ $note->type }}</span>
                                         {{ $note->created_at->format('d M Y, H:i') }}
                                     </span>
-                                    <button onclick="deleteItem({{ $note->id }})" class="thread-delete-btn" title="Delete">&times;</button>
+                                    <div class="thread-entry-actions">
+                                        <button type="button" onclick="editThreadNote({{ $note->id }})" class="thread-edit-btn" aria-label="Edit comment" title="Edit comment">Edit</button>
+                                        <button type="button" onclick="deleteItem({{ $note->id }})" class="thread-delete-btn" aria-label="Delete comment" title="Delete comment">&times;</button>
+                                    </div>
                                 </div>
-                                <p class="thread-content">{!! nl2br(e($note->content)) !!}</p>
+                                <p class="thread-content" id="thread-content-{{ $note->id }}">{{ $note->content }}</p>
+                                <div class="thread-edit-wrap" id="thread-edit-wrap-{{ $note->id }}" hidden>
+                                    <textarea class="thread-edit-textarea" id="thread-edit-input-{{ $note->id }}" aria-label="Edit comment" onkeydown="handleThreadNoteKeydown(event, {{ $note->id }})">{{ $note->content }}</textarea>
+                                    <div class="thread-edit-actions">
+                                        <button class="icon-btn" type="button" onclick="cancelThreadNoteEdit({{ $note->id }})">Cancel</button>
+                                        <button class="primary-btn" type="button" onclick="saveThreadNote({{ $note->id }})">Save</button>
+                                    </div>
+                                </div>
                             </div>
                         @empty
                             <div class="thread-empty">No notes yet. Write your first update above!</div>
                         @endforelse
                     </div>
+                </div>
                 </div>
 
             </div>
@@ -1342,7 +1633,7 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
         @if($currentProject)
             <div style="display:flex;align-items:center;gap:7px;margin-bottom:14px;padding:8px 10px;background:var(--todo-accent-soft);border:1px solid var(--todo-accent-muted);border-radius:var(--todo-radius-sm);font-size:12px;color:var(--text-secondary);">
                 <span class="project-dot" style="background:{{ $currentProject->color }};"></span>
-                Adding to: <strong style="color:var(--text);">{{ $currentProject->name }}</strong>
+                Adding to project: <strong style="color:var(--text);">{{ $currentProject->name }}</strong>
             </div>
         @endif
 
@@ -1420,6 +1711,9 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
     let todoLoadingHideTimer;
     let todoLoadingProgressTimer;
     let todoLoadingProgress = 0;
+    let todoShellRefreshId = 0;
+    let todoWorkspaceSnapshot = null;
+    let todoModalFocusAfterCloseId = null;
 
     function setTodoLoading(isLoading) {
         const loadingBar = document.getElementById('todo-loading-bar');
@@ -1522,9 +1816,11 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
         }
     }
 
-    async function todoRequest(url, options) {
-        setTodoLoading(true);
-        await waitForTodoLoadingPaint();
+    async function todoRequest(url, options, { showProgress = true } = {}) {
+        if (showProgress) {
+            setTodoLoading(true);
+            await waitForTodoLoadingPaint();
+        }
 
         try {
             const response = await fetch(url, options);
@@ -1537,13 +1833,59 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
             const message = payload.message || Object.values(payload.errors || {}).flat()[0] || 'Perubahan tidak dapat disimpan.';
             throw new Error(message);
         } finally {
-            setTodoLoading(false);
+            if (showProgress) {
+                setTodoLoading(false);
+            }
         }
     }
 
-    async function refreshTodoShell(url = window.location.href, { pushState = false } = {}) {
-        setTodoLoading(true);
-        await waitForTodoLoadingPaint();
+    async function refreshTodoShell(url = window.location.href, { pushState = false, replaceState = false } = {}) {
+        const refreshId = ++todoShellRefreshId;
+        const requestedUrl = new URL(url, window.location.href);
+        const shouldShowCardModal = requestedUrl.pathname === todoIndexPath && requestedUrl.searchParams.has('active');
+        const shell = document.querySelector('.todo-shell');
+        const workspace = document.getElementById('task-workspace-container');
+        const backdrop = document.getElementById('task-modal-backdrop');
+        const openingCardModal = shouldShowCardModal && !shell?.classList.contains('card-modal-open');
+        const closingCardModal = !shouldShowCardModal && shell?.classList.contains('card-modal-open');
+
+        if (closingCardModal && !todoModalFocusAfterCloseId) {
+            todoModalFocusAfterCloseId = activeTodoId;
+        }
+
+        if (workspace) {
+            if (!todoWorkspaceSnapshot) {
+                todoWorkspaceSnapshot = {
+                    markup: workspace.innerHTML,
+                    className: workspace.className,
+                    shellClassName: shell?.className,
+                    backdropHidden: backdrop?.hidden ?? true,
+                };
+            }
+
+            if (shouldShowCardModal) {
+                shell?.classList.add('card-modal-open');
+                workspace.classList.remove('is-empty');
+                workspace.setAttribute('aria-busy', 'true');
+                workspace.innerHTML = `
+                    <div class="todo-workspace-skeleton" role="status" aria-label="Loading task">
+                        <div class="todo-skeleton-block todo-skeleton-meta"></div>
+                        <div class="todo-skeleton-block todo-skeleton-title"></div>
+                        <div class="todo-skeleton-block todo-skeleton-copy"></div>
+                        <div class="todo-skeleton-block todo-skeleton-copy short"></div>
+                        <div class="todo-skeleton-block todo-skeleton-section"></div>
+                        <div class="todo-skeleton-block todo-skeleton-section"></div>
+                    </div>`;
+            } else {
+                shell?.classList.remove('card-modal-open');
+                workspace.classList.add('is-empty');
+                workspace.removeAttribute('aria-busy');
+            }
+
+            if (backdrop) {
+                backdrop.hidden = !shouldShowCardModal;
+            }
+        }
 
         try {
             const response = await fetch(url, {
@@ -1564,7 +1906,12 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
                 throw new Error('Workspace response tidak valid.');
             }
 
+            if (refreshId !== todoShellRefreshId) {
+                return;
+            }
+
             currentShell.replaceWith(nextShell);
+            todoWorkspaceSnapshot = null;
 
             ['modal-project', 'modal-list', 'modal-task', 'modal-command', 'todo-toast'].forEach((id) => {
                 const currentElement = document.getElementById(id);
@@ -1580,11 +1927,33 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 
             if (pushState) {
                 window.history.pushState({}, '', url);
+            } else if (replaceState) {
+                window.history.replaceState({}, '', url);
             }
 
             bindTodoTitleEditor();
-        } finally {
-            setTodoLoading(false);
+
+            if (openingCardModal) {
+                document.getElementById('close-task-modal')?.focus();
+            } else if (todoModalFocusAfterCloseId && !shouldShowCardModal) {
+                document.querySelector(`#task-card-${todoModalFocusAfterCloseId} .task-card-link`)?.focus();
+                todoModalFocusAfterCloseId = null;
+            }
+        } catch (error) {
+            if (refreshId === todoShellRefreshId && workspace?.isConnected) {
+                workspace.innerHTML = todoWorkspaceSnapshot?.markup ?? '';
+                workspace.className = todoWorkspaceSnapshot?.className ?? 'pane-workspace is-empty';
+                workspace.removeAttribute('aria-busy');
+                if (shell && todoWorkspaceSnapshot?.shellClassName) {
+                    shell.className = todoWorkspaceSnapshot.shellClassName;
+                }
+                if (backdrop) {
+                    backdrop.hidden = todoWorkspaceSnapshot?.backdropHidden ?? true;
+                }
+                todoWorkspaceSnapshot = null;
+            }
+
+            throw error;
         }
     }
 
@@ -1598,6 +1967,17 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
         refreshTodoShell(link.href, { pushState: true }).catch((error) => showToast(error.message));
 
         return false;
+    }
+
+    function closeTaskModal() {
+        if (!document.querySelector('.todo-shell.card-modal-open')) {
+            return;
+        }
+
+        todoModalFocusAfterCloseId = activeTodoId;
+        const url = new URL(window.location.href);
+        url.searchParams.delete('active');
+        refreshTodoShell(url.href, { replaceState: true }).catch((error) => showToast(error.message));
     }
 
     function closeModals() {
@@ -2156,18 +2536,34 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
             return;
         }
 
+        const todoId = activeTodoId;
+        const previousTitle = title.textContent.trim();
+        const taskCardTitle = document.querySelector(`#task-card-${todoId} .task-title-label`);
+
+        title.textContent = nextTitle;
+        taskCardTitle?.replaceChildren(document.createTextNode(nextTitle));
+        cancelTaskTitleEdit();
+
         try {
-            const response = await todoRequest(`/todos/${activeTodoId}`, {
+            const response = await todoRequest(`/todos/${todoId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                 body: JSON.stringify({ title: nextTitle })
-            });
+            }, { showProgress: false });
             const data = await response.json();
 
-            title.textContent = data.todo.title;
-            document.querySelector(`#task-card-${activeTodoId} .task-title-label`)?.replaceChildren(document.createTextNode(data.todo.title));
-            cancelTaskTitleEdit();
+            if (activeTodoId === todoId) {
+                title.textContent = data.todo.title;
+            }
+
+            taskCardTitle?.replaceChildren(document.createTextNode(data.todo.title));
         } catch (error) {
+            if (activeTodoId === todoId) {
+                title.textContent = previousTitle;
+                input.value = previousTitle;
+            }
+
+            taskCardTitle?.replaceChildren(document.createTextNode(previousTitle));
             showToast(error.message);
         }
     }
@@ -2239,6 +2635,85 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
         }
     }
 
+    function editThreadNote(itemId) {
+        const content = document.getElementById(`thread-content-${itemId}`);
+        const editor = document.getElementById(`thread-edit-wrap-${itemId}`);
+        const input = document.getElementById(`thread-edit-input-${itemId}`);
+
+        if (!content || !editor || !input) {
+            return;
+        }
+
+        input.value = content.textContent.trim();
+        content.hidden = true;
+        editor.hidden = false;
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+    }
+
+    function cancelThreadNoteEdit(itemId) {
+        const content = document.getElementById(`thread-content-${itemId}`);
+        const editor = document.getElementById(`thread-edit-wrap-${itemId}`);
+        const input = document.getElementById(`thread-edit-input-${itemId}`);
+
+        if (!content || !editor || !input) {
+            return;
+        }
+
+        input.value = content.textContent.trim();
+        content.hidden = false;
+        editor.hidden = true;
+    }
+
+    function handleThreadNoteKeydown(event, itemId) {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            cancelThreadNoteEdit(itemId);
+        }
+    }
+
+    async function saveThreadNote(itemId) {
+        const content = document.getElementById(`thread-content-${itemId}`);
+        const editor = document.getElementById(`thread-edit-wrap-${itemId}`);
+        const input = document.getElementById(`thread-edit-input-${itemId}`);
+
+        if (!content || !editor || !input) {
+            return;
+        }
+
+        const nextContent = input.value.trim();
+        const previousContent = content.textContent.trim();
+
+        if (!nextContent) {
+            showToast('Komentar tidak boleh kosong.');
+            input.focus();
+            return;
+        }
+
+        content.textContent = nextContent;
+        content.hidden = false;
+        editor.hidden = true;
+
+        try {
+            const response = await todoRequest(`/todos/items/${itemId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify({ content: nextContent })
+            }, { showProgress: false });
+            const data = await response.json();
+
+            content.textContent = data.item.content;
+            input.value = data.item.content;
+        } catch (error) {
+            content.textContent = previousContent;
+            content.hidden = true;
+            editor.hidden = false;
+            input.value = nextContent;
+            showToast(error.message);
+        }
+    }
+
     async function deleteItem(itemId) {
         if (!confirm('Hapus item ini?')) return;
         try {
@@ -2301,6 +2776,36 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
         event.preventDefault();
         closeModals();
         refreshTodoShell(url.href, { pushState: true }).catch((error) => showToast(error.message));
+    });
+
+    document.addEventListener('keydown', (event) => {
+        const dialog = document.getElementById('task-workspace-container');
+
+        if (!dialog || !document.querySelector('.todo-shell.card-modal-open') || event.target.closest?.('.todo-modal-overlay')) {
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            if (event.target.id !== 'ws-task-title-input') {
+                closeTaskModal();
+            }
+
+            return;
+        }
+
+        if (event.key === 'Tab') {
+            const focusableElements = [...dialog.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')];
+            const firstElement = focusableElements[0];
+            const lastElement = focusableElements.at(-1);
+
+            if (event.shiftKey && (document.activeElement === firstElement || !dialog.contains(document.activeElement))) {
+                event.preventDefault();
+                lastElement?.focus();
+            } else if (!event.shiftKey && (document.activeElement === lastElement || !dialog.contains(document.activeElement))) {
+                event.preventDefault();
+                firstElement?.focus();
+            }
+        }
     });
 
     window.addEventListener('popstate', () => {

@@ -56,5 +56,6 @@ Route::middleware(['auth', 'sso.token.active'])->group(function () {
     Route::put('/todos/{todo}', [TodoController::class, 'update'])->name('todos.update');
     Route::delete('/todos/{todo}', [TodoController::class, 'destroy'])->name('todos.destroy');
     Route::post('/todos/{todo}/items', [TodoController::class, 'storeItem'])->name('todos.items.store');
+    Route::put('/todos/items/{item}', [TodoController::class, 'updateItem'])->name('todos.items.update');
     Route::delete('/todos/items/{item}', [TodoController::class, 'deleteItem'])->name('todos.items.destroy');
 });

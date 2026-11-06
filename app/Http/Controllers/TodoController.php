@@ -7,6 +7,7 @@ use App\Models\TodoItem;
 use App\Models\TodoList;
 use App\Models\TodoProject;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -53,12 +54,13 @@ class TodoController extends Controller
             ->orderByRaw("CASE WHEN status = 'done' THEN 2 ELSE 1 END")
             ->latest()
             ->get();
+        $activeTodo = $todos->firstWhere('id', $request->integer('active'));
 
         return view('todos.index', [
             'projects' => $projects,
             'todoLists' => $todoLists,
             'todos' => $todos,
-            'activeTodo' => null,
+            'activeTodo' => $activeTodo,
             'currentProjectId' => $currentProject?->id,
             'currentProject' => $currentProject,
             'detailOnly' => false,
@@ -192,36 +194,14 @@ class TodoController extends Controller
         ]);
     }
 
-    public function show(Request $request, Todo $todo): View
+    public function show(Request $request, Todo $todo): RedirectResponse
     {
         abort_unless($todo->user_id === $request->user()->user_id, 403);
 
-        TodoList::ensureSystemLists($request->user());
-
-        $todo->load(['project', 'todoList', 'items' => function ($q) {
-            $q->latest();
-        }]);
-
-        $projects = TodoProject::where('user_id', $request->user()->user_id)
-            ->withCount([
-                'todos as pending_count' => function ($q) {
-                    $q->where('status', '!=', 'done');
-                },
-            ])
-            ->latest()
-            ->get();
-        $todoLists = TodoList::where('user_id', $request->user()->user_id)->orderBy('position')->orderBy('id')->get();
-        $currentProjectId = $request->integer('project_id');
-
-        return view('todos.index', [
-            'projects' => $projects,
-            'todoLists' => $todoLists,
-            'todos' => collect(),
-            'activeTodo' => $todo,
-            'currentProjectId' => $currentProjectId ?: null,
-            'currentProject' => $projects->firstWhere('id', $currentProjectId),
-            'detailOnly' => true,
-        ]);
+        return redirect()->route('todos.index', array_merge(
+            $request->only(['project_id', 'status']),
+            ['active' => $todo->id],
+        ));
     }
 
     public function update(Request $request, Todo $todo): JsonResponse
@@ -392,5 +372,21 @@ class TodoController extends Controller
         $item->delete();
 
         return response()->json(['success' => true]);
+    }
+
+    public function updateItem(Request $request, TodoItem $item): JsonResponse
+    {
+        abort_unless($item->user_id === $request->user()->user_id, 403);
+
+        $validated = $request->validate([
+            'content' => ['required', 'string'],
+        ]);
+
+        $item->update($validated);
+
+        return response()->json([
+            'success' => true,
+            'item' => $item->fresh(),
+        ]);
     }
 }
