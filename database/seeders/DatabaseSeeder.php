@@ -24,6 +24,8 @@ class DatabaseSeeder extends Seeder
             ]
         );
 
+        $this->call(TodoListSeeder::class);
+
         $folder = Folder::firstOrCreate(
             ['user_id' => $user->user_id, 'name' => 'Projek Codebook'],
             ['icon' => 'folder']

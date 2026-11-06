@@ -14,6 +14,7 @@ class Todo extends Model
     protected $fillable = [
         'user_id',
         'todo_project_id',
+        'todo_list_id',
         'title',
         'description',
         'status',
@@ -33,6 +34,11 @@ class Todo extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(TodoProject::class, 'todo_project_id');
+    }
+
+    public function todoList(): BelongsTo
+    {
+        return $this->belongsTo(TodoList::class, 'todo_list_id');
     }
 
     public function items(): HasMany

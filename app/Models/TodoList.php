@@ -1,0 +1,48 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class TodoList extends Model
+{
+    use HasFactory;
+
+    public const SYSTEM_LISTS = [
+        'todo' => ['name' => 'To do', 'color' => '#94a3b8', 'position' => 0],
+        'in_progress' => ['name' => 'In progress', 'color' => '#6366f1', 'position' => 1],
+        'blocked' => ['name' => 'Blocked', 'color' => '#f59e0b', 'position' => 2],
+        'done' => ['name' => 'Done', 'color' => '#10b981', 'position' => 3],
+    ];
+
+    protected $fillable = [
+        'user_id',
+        'name',
+        'system_status',
+        'color',
+        'position',
+    ];
+
+    public static function ensureSystemLists(User $user): void
+    {
+        foreach (self::SYSTEM_LISTS as $status => $attributes) {
+            self::firstOrCreate(
+                ['user_id' => $user->user_id, 'system_status' => $status],
+                $attributes,
+            );
+        }
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
+    }
+
+    public function todos(): HasMany
+    {
+        return $this->hasMany(Todo::class);
+    }
+}

@@ -5,7 +5,7 @@
 @section('styles')
 <style>
 /* =========================================================
-   TODOS PAGE — Modern Linear-Inspired 3-Column Shell
+   TODOS PAGE — Project Sidebar, Status Board, Task Details
    ========================================================= */
 
 /* ---- CSS Custom Properties (Todo-Scoped) ---- */
@@ -75,19 +75,78 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 
 /* Pane 2: Task List */
 .pane-list {
-    width: 360px;
-    min-width: 300px;
-    flex-shrink: 0;
-    background: var(--panel);
+    flex: 1;
+    min-width: 0;
+    background: var(--bg);
     border-right: 1px solid var(--border);
 }
 
 /* Pane 3: Workspace */
 .pane-workspace {
-    flex: 1;
+    width: 360px;
+    min-width: 320px;
+    flex-shrink: 0;
     background: var(--bg);
     overflow-y: auto;
 }
+
+.pane-workspace.is-empty { display: none; }
+.todo-detail-shell .pane-workspace { width: 100%; min-width: 0; }
+.todo-detail-shell .task-workspace-content { max-width: 900px; margin: 0 auto; }
+
+/* ---- Kanban Board ---- */
+.board-header { padding-inline: 20px; }
+.board-header .pane-header-title { font-size: 14px; }
+.board-scroll {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    overflow: auto;
+    padding: 18px 20px 24px;
+}
+.board-column {
+    display: flex;
+    flex-direction: column;
+    width: 248px;
+    min-width: 248px;
+    max-height: 100%;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--panel) 78%, var(--bg));
+    transition: border-color var(--todo-transition), background var(--todo-transition);
+}
+.board-column.drag-over { border-color: var(--todo-accent); background: var(--todo-accent-soft); }
+.board-column-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: auto;
+    padding: 13px 12px 11px;
+    background: transparent;
+    border-bottom: 1px solid var(--border);
+    box-shadow: none;
+    position: static;
+}
+.board-column-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+.board-column-title { font-size: 11.5px; font-weight: 700; color: var(--text); flex: 1; }
+.board-column-count { font-size: 10px; font-weight: 700; color: var(--muted); background: var(--panel-2); border: 1px solid var(--border); border-radius: 7px; padding: 2px 7px; font-variant-numeric: tabular-nums; }
+.board-column-add { border: 0; background: transparent; color: var(--muted); width: 24px; height: 24px; border-radius: 6px; font-size: 18px; cursor: pointer; line-height: 1; }
+.board-column-add:hover { color: var(--text); background: var(--panel-hover); }
+.board-column-delete:hover { color: #ef4444; background: rgba(239,68,68,.1); }
+.board-column-cards { display: flex; flex-direction: column; gap: 8px; padding: 9px; overflow-y: auto; min-height: 54px; }
+.board-column-empty { padding: 12px 8px; text-align: center; font-size: 10.5px; color: var(--muted); border: 1px dashed var(--border); border-radius: 8px; }
+.board-task-card { display: flex; gap: 9px; padding: 11px; min-height: 0; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); box-shadow: 0 1px 2px rgba(0,0,0,.04); cursor: grab; }
+.board-task-card::before { display: none; }
+.board-task-card:hover { border-color: var(--border-hover); background: var(--panel); box-shadow: 0 4px 12px rgba(0,0,0,.07); transform: translateY(-1px); }
+.board-task-card:active { cursor: grabbing; }
+.board-task-card.active { border-color: var(--todo-accent-muted); box-shadow: 0 0 0 2px var(--todo-accent-soft); background: var(--panel); }
+.board-task-card .task-card-link { min-height: 100%; }
+.board-task-card .task-title-text { font-size: 12px; line-height: 1.45; }
+.board-task-card .task-title-text { white-space: normal; overflow: visible; text-overflow: clip; }
+.board-task-card .task-card-meta { margin-top: 9px; gap: 6px; flex-wrap: wrap; }
+.board-task-card .task-checkbox { width: 15px; height: 15px; }
 
 /* ---- Pane Headers ---- */
 .pane-header {
@@ -197,40 +256,52 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 
 /* ---- Status Filter Chips ---- */
 .status-filter-section {
-    padding: 10px 10px 12px;
+    padding: 14px 12px 16px;
     border-top: 1px solid var(--border);
     flex-shrink: 0;
 }
 
 .status-filter-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
     font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: .08em;
+    letter-spacing: .1em;
     color: var(--muted);
-    margin-bottom: 7px;
+    margin-bottom: 10px;
 }
+
+.status-filter-label svg { color: var(--todo-accent); }
 
 .status-filter-chips {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 6px;
 }
 
 .status-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
     font-size: 11px;
-    padding: 3px 9px;
-    border-radius: 999px;
-    border: 1px solid var(--border);
+    padding: 0 11px;
+    border-radius: 8px;
+    border: 1px solid transparent;
     text-decoration: none;
     color: var(--muted);
-    background: transparent;
-    transition: all var(--todo-transition);
-    font-weight: 500;
+    background: var(--panel-2);
+    transition: color var(--todo-transition), background var(--todo-transition), border-color var(--todo-transition), transform var(--todo-transition);
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 .status-chip:hover { background: var(--panel-hover); color: var(--text); border-color: var(--border-hover); }
-.status-chip.active { background: var(--todo-accent-soft); color: var(--todo-accent); border-color: var(--todo-accent-muted); }
+.status-chip:active { transform: scale(.97); }
+.status-chip.active { background: var(--todo-accent-soft); color: var(--todo-accent); border-color: var(--todo-accent-muted); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--todo-accent) 12%, transparent); }
+.status-chip:focus-visible { outline: 2px solid var(--todo-accent); outline-offset: 2px; }
 
 /* ---- Task Cards ---- */
 .task-list-scroll {
@@ -936,18 +1007,25 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 /* ---- Responsive ---- */
 @media (max-width: 1100px) {
     .pane-projects { width: 200px; min-width: 160px; }
-    .pane-list { width: 320px; min-width: 260px; }
+    .pane-workspace { width: 320px; min-width: 290px; }
+    .board-scroll { padding-inline: 14px; gap: 10px; }
+    .board-column { width: 230px; min-width: 230px; }
 }
 
 @media (max-width: 860px) {
-    .todo-shell { display: block; height: auto; min-height: calc(100vh - 52px); overflow: visible; }
+    .todo-shell { display: flex; flex-direction: column; height: auto; min-height: calc(100vh - 52px); overflow: visible; }
     body:has(.todo-shell) { overflow: auto; }
-    .pane-projects { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
-    .project-list-scroll { display: flex; flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 6px 8px; gap: 4px; max-height: 48px; }
-    .project-section-label, .status-filter-section { display: none; }
+    .pane-projects { width: 100%; min-width: 0; border-right: none; border-bottom: 1px solid var(--border); }
+    .pane-projects > .pane-header { height: 42px; }
+    .project-list-scroll { display: flex; flex: 0 0 auto; flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 6px 8px; gap: 4px; max-height: 48px; }
+    .project-section-label { display: none; }
+    .status-filter-section { display: none; }
     .project-link { white-space: nowrap; flex-shrink: 0; }
-    .pane-list { width: 100%; border-right: none; height: min(360px, 44vh); }
-    .pane-workspace { min-height: calc(100vh - 500px); }
+    .pane-list { flex: 0 0 390px; width: 100%; border-right: none; }
+    .board-header { height: 48px; padding-inline: 14px; }
+    .board-scroll { padding: 12px 14px 16px; }
+    .board-column { width: min(82vw, 300px); min-width: min(82vw, 300px); max-height: 360px; }
+    .pane-workspace { width: 100%; min-width: 0; min-height: 320px; border-top: 1px solid var(--border); }
     .task-workspace-content { padding: 20px 16px; }
     .ws-header-card { padding: 18px 16px; }
 }
@@ -961,9 +1039,9 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 {{-- ===== HEADER ===== --}}
 <header>
     <div class="brand">
-        <a href="{{ route('workspace') }}" style="color:var(--muted);text-decoration:none;font-size:12px;display:inline-flex;align-items:center;gap:4px;padding-right:12px;border-right:1px solid var(--border);">
+        <a href="{{ $detailOnly ? route('todos.index', request()->only(['project_id', 'status'])) : route('workspace') }}" style="color:var(--muted);text-decoration:none;font-size:12px;display:inline-flex;align-items:center;gap:4px;padding-right:12px;border-right:1px solid var(--border);">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            Notes
+            {{ $detailOnly ? 'Board' : 'Notes' }}
         </a>
         <h1>Codebook</h1>
         <span style="background:var(--todo-accent-soft);color:var(--todo-accent);border:1px solid var(--todo-accent-muted);font-family:'Inter',sans-serif;font-weight:600;font-size:10.5px;padding:2px 8px;border-radius:999px;">Tasks</span>
@@ -989,8 +1067,9 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 </header>
 
 {{-- ===== 3-COLUMN SHELL ===== --}}
-<div class="todo-shell" data-active-todo-id="{{ $activeTodo?->id ?? '' }}" data-project-id="{{ $currentProjectId ?? '' }}" data-status-filter="{{ $currentStatus ?? '' }}">
+<div class="todo-shell {{ $detailOnly ? 'todo-detail-shell' : '' }}" data-active-todo-id="{{ $activeTodo?->id ?? '' }}" data-project-id="{{ $currentProjectId ?? '' }}" data-status-filter="{{ $currentStatus ?? '' }}">
 
+    @if(!$detailOnly)
     {{-- ===== PANE 1: PROJECTS ===== --}}
     <aside class="pane-projects">
         <div class="pane-header">
@@ -1029,7 +1108,10 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
         </div>
 
         <div class="status-filter-section">
-            <div class="status-filter-label">Filter by Status</div>
+            <div class="status-filter-label">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16l-6.5 7.5v5l-3 1.5v-6.5L4 5z"/></svg>
+                Filter by status
+            </div>
             <div class="status-filter-chips">
                 <a href="{{ route('todos.index', array_merge(request()->query(), ['status' => null])) }}" onclick="return navigateTodo(event, this)" class="status-chip {{ !request('status') ? 'active' : '' }}">All</a>
                 <a href="{{ route('todos.index', array_merge(request()->query(), ['status' => 'todo'])) }}" onclick="return navigateTodo(event, this)" class="status-chip {{ request('status') === 'todo' ? 'active' : '' }}">Todo</a>
@@ -1040,67 +1122,69 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
         </div>
     </aside>
 
-    {{-- ===== PANE 2: TASK LIST ===== --}}
+    {{-- ===== PANE 2: STATUS BOARD ===== --}}
     <section class="pane-list">
-        <div class="pane-header">
+        <div class="pane-header board-header">
             <span class="pane-header-title">
-                Tasks
+                Board
                 @if($currentProject)
                     <span class="pane-header-subtitle">/ {{ $currentProject->name }}</span>
                 @endif
             </span>
-            <button class="primary-btn" onclick="openNewTaskModal()" style="height:28px;padding:0 10px;font-size:11.5px;">
+            <button class="primary-btn" onclick="openNewListModal()" style="height:30px;padding:0 11px;font-size:11.5px;">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                New Task
+                Add list
             </button>
         </div>
 
-        <div class="task-list-scroll" id="task-list-container">
-            @forelse($todos as $t)
-                <div class="task-card {{ $t->status === 'done' ? 'done' : '' }} {{ $activeTodo && $activeTodo->id === $t->id ? 'active' : '' }}" id="task-card-{{ $t->id }}" data-project-id="{{ $t->todo_project_id }}">
-                    <div class="task-checkbox-wrap">
-                        <input type="checkbox" class="task-checkbox" {{ $t->status === 'done' ? 'checked' : '' }}
-                               onclick="toggleTaskDone({{ $t->id }}, this.checked)">
+        <div class="board-scroll" id="task-list-container">
+            @foreach($todoLists as $column)
+                @php $columnTodos = $todos->where('todo_list_id', $column->id); @endphp
+                <section class="board-column" data-list-id="{{ $column->id }}" data-status="{{ $column->system_status ?? '' }}" ondragover="allowTodoDrop(event)" ondragleave="leaveTodoDrop(event)" ondrop="dropTodoCard(event, {{ $column->id }})" aria-label="{{ $column->name }} list">
+                    <header class="board-column-header">
+                        <span class="board-column-dot" style="background:{{ $column->color }};"></span>
+                        <span class="board-column-title">{{ $column->name }}</span>
+                        <span class="board-column-count">{{ $columnTodos->count() }}</span>
+                        <button class="board-column-add" type="button" onclick="openNewTaskModal({{ $column->id }})" aria-label="Add card to {{ $column->name }}">+</button>
+                        @if($column->system_status === null)
+                            <button class="board-column-add board-column-delete" type="button" onclick="deleteTodoList({{ $column->id }})" aria-label="Delete {{ $column->name }} list" title="Delete list">&times;</button>
+                        @endif
+                    </header>
+                    <div class="board-column-cards">
+                        @forelse($columnTodos as $t)
+                            <article class="task-card board-task-card {{ $t->status === 'done' ? 'done' : '' }}" id="task-card-{{ $t->id }}" data-project-id="{{ $t->todo_project_id }}" data-todo-id="{{ $t->id }}" data-list-id="{{ $column->id }}" data-status="{{ $t->status }}" data-persisted-list-id="{{ $column->id }}" data-persisted-status="{{ $t->status }}" draggable="true" ondragstart="startTodoDrag(event, {{ $t->id }})" ondragend="endTodoDrag(event)">
+                                <div class="task-checkbox-wrap">
+                                    <input type="checkbox" class="task-checkbox" aria-label="Mark {{ $t->title }} done" {{ $t->status === 'done' ? 'checked' : '' }} onclick="event.stopPropagation(); toggleTaskDone({{ $t->id }}, this.checked)">
+                                </div>
+                                <div class="task-card-body">
+                                    <a class="task-card-link" href="{{ route('todos.show', array_merge(['todo' => $t->id], request()->query())) }}">
+                                        <div class="task-title-text"><span class="task-title-label">{{ $t->title }}</span></div>
+                                        <div class="task-card-meta">
+                                            @if($t->project)
+                                                <span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--muted);">
+                                                    <span class="project-dot" style="width:5px;height:5px;background:{{ $t->project->color }};"></span>{{ $t->project->name }}
+                                                </span>
+                                            @endif
+                                            <span class="badge badge-{{ $t->priority }}">{{ $t->priority }}</span>
+                                            @if($t->items->count() > 0)
+                                                <span class="task-items-count"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>{{ $t->items->count() }}</span>
+                                            @endif
+                                        </div>
+                                    </a>
+                                </div>
+                            </article>
+                        @empty
+                            <div class="board-column-empty">Drop a card here</div>
+                        @endforelse
                     </div>
-                    <div class="task-card-body">
-                        <a class="task-card-link" href="{{ route('todos.index', array_merge(request()->query(), ['active' => $t->id])) }}" onclick="return navigateTodo(event, this)">
-                            <div class="task-title-text">
-                                <span class="task-title-label">{{ $t->title }}</span>
-                            </div>
-                            <div class="task-card-meta">
-                                @if($t->project)
-                                    <span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--muted);">
-                                        <span class="project-dot" style="width:5px;height:5px;background:{{ $t->project->color }};"></span>
-                                        {{ $t->project->name }}
-                                    </span>
-                                    <span class="task-meta-sep"></span>
-                                @endif
-                                <span class="badge badge-{{ $t->priority }}">{{ $t->priority }}</span>
-                                @if($t->items->count() > 0)
-                                    <span class="task-meta-sep"></span>
-                                    <span class="task-items-count">
-                                        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-                                        {{ $t->items->count() }}
-                                    </span>
-                                @endif
-                            </div>
-                        </a>
-                    </div>
-                </div>
-            @empty
-                <div style="padding:40px 24px;text-align:center;">
-                    <div style="width:36px;height:36px;border-radius:10px;background:var(--panel-2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                    </div>
-                    <div style="font-size:13px;color:var(--text-secondary);font-weight:500;">No tasks yet</div>
-                    <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">Click <strong style="color:var(--text);">+ New Task</strong> to get started</div>
-                </div>
-            @endforelse
+                </section>
+            @endforeach
         </div>
     </section>
+    @endif
 
-    {{-- ===== PANE 3: WORKSPACE ===== --}}
-    <main class="pane-workspace" id="task-workspace-container">
+    {{-- ===== TASK DETAIL PAGE ===== --}}
+    <main class="pane-workspace {{ $activeTodo ? '' : 'is-empty' }}" id="task-workspace-container">
         @if($activeTodo)
             <div class="task-workspace-content">
 
@@ -1116,11 +1200,10 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
                                         {{ $activeTodo->project->name }}
                                     </span>
                                 @endif
-                                <select class="ws-status-select" onchange="updateTaskStatus({{ $activeTodo->id }}, this.value)">
-                                    <option value="todo"        {{ $activeTodo->status === 'todo'        ? 'selected' : '' }}>⬜ Todo</option>
-                                    <option value="in_progress" {{ $activeTodo->status === 'in_progress' ? 'selected' : '' }}>🔄 In Progress</option>
-                                    <option value="blocked"     {{ $activeTodo->status === 'blocked'     ? 'selected' : '' }}>🚫 Blocked</option>
-                                    <option value="done"        {{ $activeTodo->status === 'done'        ? 'selected' : '' }}>✅ Done</option>
+                                <select class="ws-status-select" aria-label="Move card to list" onchange="updateTaskList({{ $activeTodo->id }}, this.value)">
+                                    @foreach($todoLists as $todoList)
+                                        <option value="{{ $todoList->id }}" {{ $activeTodo->todo_list_id === $todoList->id ? 'selected' : '' }}>{{ $todoList->name }}</option>
+                                    @endforeach
                                 </select>
                             </div>
 
@@ -1225,8 +1308,8 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
                 <div class="ws-empty-icon">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
                 </div>
-                <p>Select a task to open workspace</p>
-                <span>Or create a new task to get started</span>
+                <p>No task selected</p>
+                <span>Choose a card from the board.</span>
             </div>
         @endif
     </main>
@@ -1253,6 +1336,25 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
     </div>
 </div>
 
+{{-- New List Modal --}}
+<div id="modal-list" class="todo-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="list-modal-title">
+    <div class="todo-modal" style="max-width:360px;">
+        <h3 class="todo-modal-title" id="list-modal-title">Add a list</h3>
+        <div class="form-group">
+            <label class="form-label" for="list-name-input">List name</label>
+            <input type="text" id="list-name-input" class="form-input" maxlength="80" placeholder="e.g. Review, Backlog">
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="list-color-input">List color</label>
+            <input type="color" id="list-color-input" value="#6366f1" style="height:34px;width:52px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:none;padding:3px;">
+        </div>
+        <div class="modal-footer">
+            <button class="icon-btn" onclick="closeModals()">Cancel</button>
+            <button class="primary-btn" onclick="submitNewList()">Create list</button>
+        </div>
+    </div>
+</div>
+
 {{-- New Task Modal --}}
 <div id="modal-task" class="todo-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="task-modal-title">
     <div class="todo-modal">
@@ -1272,6 +1374,14 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
         <div class="form-group">
             <label class="form-label">Description</label>
             <textarea id="task-desc-input" class="form-textarea" rows="4" placeholder="Add details, context, or acceptance criteria... (optional)"></textarea>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="task-list-select">List</label>
+            <select id="task-list-select" class="form-select">
+                @foreach($todoLists as $todoList)
+                    <option value="{{ $todoList->id }}">{{ $todoList->name }}</option>
+                @endforeach
+            </select>
         </div>
         <div class="modal-row">
             <div class="form-group">
@@ -1324,6 +1434,8 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
     let activeTodoId = {{ $activeTodo ? $activeTodo->id : 'null' }};
     let currentProjectId = @json($currentProjectId ? (int) $currentProjectId : null);
     let activeStatusFilter = @json($currentStatus);
+    const todoSystemListIds = @json($todoLists->whereNotNull('system_status')->pluck('id', 'system_status'));
+    const todoListStatuses = @json($todoLists->pluck('system_status', 'id'));
     const todoIndexPath = new URL("{{ route('todos.index') }}", window.location.origin).pathname;
     let todoLoadingRequests = 0;
     let todoLoadingHideTimer;
@@ -1453,7 +1565,7 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 
             currentShell.replaceWith(nextShell);
 
-            ['modal-project', 'modal-task', 'modal-command', 'todo-toast'].forEach((id) => {
+            ['modal-project', 'modal-list', 'modal-task', 'modal-command', 'todo-toast'].forEach((id) => {
                 const currentElement = document.getElementById(id);
                 const nextElement = nextDocument.getElementById(id);
 
@@ -1490,6 +1602,7 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 
     function closeModals() {
         document.getElementById('modal-project').style.display = 'none';
+        document.getElementById('modal-list').style.display = 'none';
         document.getElementById('modal-task').style.display = 'none';
         document.getElementById('modal-command').style.display = 'none';
     }
@@ -1499,7 +1612,13 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
         document.getElementById('project-name-input').focus();
     }
 
-    function openNewTaskModal() {
+    function openNewListModal() {
+        document.getElementById('modal-list').style.display = 'flex';
+        document.getElementById('list-name-input').focus();
+    }
+
+    function openNewTaskModal(todoListId = todoSystemListIds.todo) {
+        document.getElementById('task-list-select').value = String(todoListId);
         document.getElementById('modal-task').style.display = 'flex';
         document.getElementById('task-title-input').focus();
     }
@@ -1530,11 +1649,50 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
         }
     }
 
+    async function submitNewList() {
+        const name = document.getElementById('list-name-input').value.trim();
+        const color = document.getElementById('list-color-input').value;
+
+        if (!name) {
+            showToast('Nama list wajib diisi.');
+            document.getElementById('list-name-input').focus();
+            return;
+        }
+
+        try {
+            await todoRequest("{{ route('todos.lists.store') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify({ name, color })
+            });
+            await refreshTodoShell();
+        } catch (error) {
+            showToast(error.message);
+        }
+    }
+
+    async function deleteTodoList(todoListId) {
+        if (!confirm('Delete this list? Tasks in it will move to To do.')) {
+            return;
+        }
+
+        try {
+            await todoRequest(`/todos/lists/${todoListId}`, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-TOKEN': csrfToken }
+            });
+            await refreshTodoShell();
+        } catch (error) {
+            showToast(error.message);
+        }
+    }
+
     async function submitNewTask() {
         const title = document.getElementById('task-title-input').value.trim();
         const description = document.getElementById('task-desc-input').value.trim();
         const todo_project_id = currentProjectId ?? (document.getElementById('task-project-select').value || null);
         const priority = document.getElementById('task-priority-select').value;
+        const todo_list_id = Number(document.getElementById('task-list-select').value);
         if (!title) {
             showToast('Judul task wajib diisi.');
             return;
@@ -1544,68 +1702,21 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
             const res = await todoRequest("{{ route('todos.store') }}", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                body: JSON.stringify({ title, description, todo_project_id, priority })
+                body: JSON.stringify({ title, description, todo_project_id, priority, todo_list_id })
             });
             const data = await res.json();
-            await refreshTodoShell("{{ route('todos.index') }}?active=" + data.todo.id, { pushState: true });
+            await refreshTodoShell("{{ route('todos.index', request()->only(['project_id', 'status'])) }}", { pushState: true });
         } catch (error) {
             showToast(error.message);
         }
     }
 
     async function toggleTaskDone(todoId, isChecked) {
-        const status = isChecked ? 'done' : 'todo';
-        const checkbox = document.querySelector(`#task-card-${todoId} .task-checkbox`);
         const card = document.getElementById(`task-card-${todoId}`);
-        const taskTitleLabel = card?.querySelector('.task-title-label');
-        const wasDone = card?.classList.contains('done') ?? false;
-        const projectId = card?.dataset.projectId;
+        const targetListId = todoSystemListIds[isChecked ? 'done' : 'todo'];
 
-        const setTaskCompletionState = (isDone) => {
-            card?.classList.toggle('done', isDone);
-
-            if (taskTitleLabel) {
-                taskTitleLabel.style.textDecoration = isDone ? 'line-through' : 'none';
-                taskTitleLabel.style.textDecorationThickness = isDone ? '2px' : '';
-            }
-        };
-
-        setTaskCompletionState(isChecked);
-        updateProjectPendingCount(projectId, wasDone, isChecked);
-
-        try {
-            const response = await todoRequest(`/todos/${todoId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                body: JSON.stringify({ status })
-            });
-            const { todo } = await response.json();
-
-            const serverIsDone = todo.status === 'done';
-
-            if (serverIsDone !== isChecked) {
-                setTaskCompletionState(serverIsDone);
-                updateProjectPendingCount(projectId, isChecked, serverIsDone);
-            }
-
-            if (activeTodoId === todoId) {
-                const statusSelect = document.querySelector('.ws-status-select');
-
-                if (statusSelect) {
-                    statusSelect.value = todo.status;
-                }
-            }
-
-            if (activeStatusFilter && activeStatusFilter !== todo.status) {
-                card?.remove();
-            }
-        } catch (error) {
-            showToast(error.message);
-            if (checkbox) {
-                checkbox.checked = !isChecked;
-            }
-            setTaskCompletionState(wasDone);
-            updateProjectPendingCount(projectId, isChecked, wasDone);
+        if (card && targetListId) {
+            await moveTodoCard(card, Number(targetListId));
         }
     }
 
@@ -1628,12 +1739,130 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
         badge.style.display = nextCount > 0 ? 'inline-block' : 'none';
     }
 
-    async function updateTaskStatus(todoId, status) {
+    function startTodoDrag(event, todoId) {
+        event.dataTransfer.effectAllowed = 'move';
+        event.dataTransfer.setData('text/plain', String(todoId));
+        event.currentTarget.classList.add('dragging');
+    }
+
+    function endTodoDrag(event) {
+        event.currentTarget.classList.remove('dragging');
+        document.querySelectorAll('.board-column.drag-over').forEach((column) => column.classList.remove('drag-over'));
+    }
+
+    function allowTodoDrop(event) {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        event.currentTarget.classList.add('drag-over');
+    }
+
+    function leaveTodoDrop(event) {
+        if (!event.currentTarget.contains(event.relatedTarget)) {
+            event.currentTarget.classList.remove('drag-over');
+        }
+    }
+
+    async function dropTodoCard(event, todoListId) {
+        event.preventDefault();
+        const column = event.currentTarget;
+        column.classList.remove('drag-over');
+        const todoId = Number(event.dataTransfer.getData('text/plain'));
+        const card = document.getElementById(`task-card-${todoId}`);
+
+        if (!todoId || !card || Number(card.dataset.listId) === todoListId) {
+            return;
+        }
+
+        await moveTodoCard(card, todoListId);
+    }
+
+    function moveTodoCardBetweenColumns(card, todoListId) {
+        const sourceColumn = card.closest('.board-column');
+        const destinationColumn = document.querySelector(`.board-column[data-list-id="${todoListId}"]`);
+        const sourceStatus = card.dataset.status;
+        const status = destinationColumn?.dataset.status || 'todo';
+
+        if (!sourceColumn || !destinationColumn || Number(card.dataset.listId) === todoListId) {
+            return;
+        }
+
+        const sourceCards = sourceColumn.querySelector('.board-column-cards');
+        const destinationCards = destinationColumn.querySelector('.board-column-cards');
+        const sourceCount = sourceColumn.querySelector('.board-column-count');
+        const destinationCount = destinationColumn.querySelector('.board-column-count');
+
+        destinationCards.querySelector('.board-column-empty')?.remove();
+        destinationCards.append(card);
+        sourceCount.textContent = String(Math.max(0, Number(sourceCount.textContent) - 1));
+        destinationCount.textContent = String(Number(destinationCount.textContent) + 1);
+        card.dataset.listId = String(todoListId);
+        card.dataset.status = status;
+        card.classList.toggle('done', status === 'done');
+
+        const checkbox = card.querySelector('.task-checkbox');
+        if (checkbox) {
+            checkbox.checked = status === 'done';
+        }
+
+        if (!sourceCards.querySelector('.board-task-card')) {
+            const emptyState = document.createElement('div');
+            emptyState.className = 'board-column-empty';
+            emptyState.textContent = 'Drop a card here';
+            sourceCards.append(emptyState);
+        }
+
+        updateProjectPendingCount(card.dataset.projectId, sourceStatus === 'done', status === 'done');
+    }
+
+    async function moveTodoCard(card, todoListId) {
+        const todoId = Number(card.dataset.todoId);
+        const previousListId = Number(card.dataset.listId);
+        const moveSequence = Number(card.dataset.moveSequence || 0) + 1;
+
+        card.dataset.moveSequence = String(moveSequence);
+        moveTodoCardBetweenColumns(card, todoListId);
+        const destinationColumn = document.querySelector(`.board-column[data-list-id="${todoListId}"]`);
+        const status = destinationColumn?.dataset.status || 'todo';
+
+        const saveStatus = async () => {
+            const response = await fetch(`/todos/${todoId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify({ status, todo_list_id: todoListId })
+            });
+            const payload = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                const message = payload.message || Object.values(payload.errors || {}).flat()[0] || 'Perubahan tidak dapat disimpan.';
+                throw new Error(message);
+            }
+
+            card.dataset.persistedStatus = payload.todo?.status || status;
+            card.dataset.persistedListId = String(payload.todo?.todo_list_id || todoListId);
+        };
+
+        const previousSave = card.todoStatusSaveQueue || Promise.resolve();
+        const currentSave = previousSave.catch(() => {}).then(saveStatus);
+        card.todoStatusSaveQueue = currentSave;
+
+        try {
+            await currentSave;
+        } catch (error) {
+            if (Number(card.dataset.moveSequence) === moveSequence) {
+                moveTodoCardBetweenColumns(card, Number(card.dataset.persistedListId || previousListId));
+                showToast(error.message);
+            }
+        }
+    }
+
+    async function updateTaskList(todoId, todoListId) {
+        const status = todoListStatuses[todoListId] || 'todo';
+
         try {
             await todoRequest(`/todos/${todoId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                body: JSON.stringify({ status })
+                body: JSON.stringify({ status, todo_list_id: Number(todoListId) })
             });
             await refreshTodoShell();
         } catch (error) {
@@ -1725,7 +1954,7 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
                 method: 'DELETE',
                 headers: { 'X-CSRF-TOKEN': csrfToken }
             });
-            await refreshTodoShell("{{ route('todos.index') }}", { pushState: true });
+            window.location.assign("{{ route('todos.index', request()->only(['project_id', 'status'])) }}");
         } catch (error) {
             showToast(error.message);
         }

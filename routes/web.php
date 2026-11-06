@@ -44,6 +44,8 @@ Route::middleware(['auth', 'sso.token.active'])->group(function () {
 
     // Advanced Linear-Style To-Do
     Route::get('/todos', [TodoController::class, 'index'])->name('todos.index');
+    Route::post('/todos/lists', [TodoController::class, 'storeList'])->name('todos.lists.store');
+    Route::delete('/todos/lists/{todoList}', [TodoController::class, 'deleteList'])->name('todos.lists.destroy');
     Route::post('/todos/projects', [TodoController::class, 'storeProject'])->name('todos.projects.store');
     Route::delete('/todos/projects/{project}', [TodoController::class, 'deleteProject'])->name('todos.projects.destroy');
     Route::post('/todos', [TodoController::class, 'store'])->name('todos.store');
