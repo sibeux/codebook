@@ -1267,11 +1267,11 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
 
         <div class="form-group">
             <label class="form-label">Task Title</label>
-            <input type="text" id="task-title-input" class="form-input" placeholder="e.g. Fix auth token refresh">
+            <textarea id="task-title-input" class="form-textarea" rows="3" maxlength="255" placeholder="e.g. Fix auth token refresh"></textarea>
         </div>
         <div class="form-group">
             <label class="form-label">Description</label>
-            <textarea id="task-desc-input" class="form-textarea" placeholder="Add details, context, or acceptance criteria... (optional)"></textarea>
+            <textarea id="task-desc-input" class="form-textarea" rows="4" placeholder="Add details, context, or acceptance criteria... (optional)"></textarea>
         </div>
         <div class="modal-row">
             <div class="form-group">
