@@ -202,6 +202,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     flex-direction: column;
     width: 248px;
     min-width: 248px;
+    height: 100%;
     max-height: 100%;
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -236,9 +237,9 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 .board-list-menu[hidden] { display: none; }
 .board-list-menu-item { display: flex; align-items: center; width: 100%; min-height: 34px; padding: 0 9px; border: 0; border-radius: 6px; color: #ef4444; background: transparent; font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
 .board-list-menu-item:hover { background: rgba(239,68,68,.1); }
-.board-column-cards { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 9px; overflow-y: auto; min-height: 54px; }
+.board-column-cards { position: relative; display: flex; flex: 1 1 auto; flex-direction: column; gap: 8px; padding: 9px; overflow-x: hidden; overflow-y: auto; min-height: 54px; scrollbar-gutter: stable; }
 .board-column-empty { padding: 12px 8px; text-align: center; font-size: 10.5px; color: var(--muted); border: 1px dashed var(--border); border-radius: 8px; }
-.board-task-card { display: flex; gap: 9px; padding: 11px; min-height: 0; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); box-shadow: 0 1px 2px rgba(0,0,0,.04); cursor: grab; }
+.board-task-card { display: flex; flex: 0 0 auto; gap: 9px; padding: 11px; min-height: 0; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); box-shadow: 0 1px 2px rgba(0,0,0,.04); cursor: grab; }
 .board-task-card.dragging, .board-task-card.dragging:hover { opacity: .32; border-style: dashed; box-shadow: none; transform: none; }
 .todo-drop-placeholder { position: absolute; z-index: 6; left: 9px; right: 9px; height: 3px; border-radius: 999px; background: var(--todo-accent); box-shadow: 0 0 0 3px var(--todo-accent-soft); pointer-events: none; transition: top 70ms ease-out; }
 .board-task-card.reorder-confirmed { animation: todo-card-reorder-confirmed 240ms ease-out; }
@@ -1234,7 +1235,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     .pane-list { flex: 0 0 390px; width: 100%; border-right: none; }
     .board-header { height: 48px; padding-inline: 14px; }
     .board-scroll { padding: 12px 14px 16px; }
-    .board-column { width: min(82vw, 300px); min-width: min(82vw, 300px); max-height: 360px; }
+    .board-column { width: min(82vw, 300px); min-width: min(82vw, 300px); height: 360px; max-height: 360px; }
     .pane-workspace { width: 100%; min-width: 0; min-height: 320px; border-top: 1px solid var(--border); }
     .task-workspace-content { padding: 20px 16px; }
     .ws-header-card { padding: 18px 16px; }
