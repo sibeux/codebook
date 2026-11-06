@@ -1549,7 +1549,9 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                                 <div class="thread-entry-header">
                                     <span class="thread-entry-time">
                                         <span class="thread-type-dot">{{ $note->type }}</span>
-                                        {{ $note->created_at->format('d M Y, H:i') }}
+                                        <time class="thread-entry-local-time" datetime="{{ $note->created_at->toIso8601String() }}">
+                                            {{ $note->created_at->format('d M Y, H:i') }}
+                                        </time>
                                     </span>
                                     <div class="thread-entry-actions">
                                         <button type="button" onclick="editThreadNote({{ $note->id }})" class="thread-edit-btn" aria-label="Edit comment" title="Edit comment">Edit</button>
@@ -1932,6 +1934,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             }
 
             bindTodoTitleEditor();
+            formatThreadEntryTimes(nextShell);
 
             if (openingCardModal) {
                 document.getElementById('close-task-modal')?.focus();
@@ -2568,6 +2571,24 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         }
     }
 
+    function formatThreadEntryTimes(container = document) {
+        const formatter = new Intl.DateTimeFormat(undefined, {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+
+        container.querySelectorAll('.thread-entry-local-time[datetime]').forEach((timeElement) => {
+            const timestamp = new Date(timeElement.dateTime);
+
+            if (!Number.isNaN(timestamp.getTime())) {
+                timeElement.textContent = formatter.format(timestamp);
+            }
+        });
+    }
+
     function bindTodoTitleEditor() {
         document.getElementById('ws-task-title-input')?.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
@@ -2582,6 +2603,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     }
 
     bindTodoTitleEditor();
+    formatThreadEntryTimes();
 
     async function deleteActiveTask(todoId) {
         if (!confirm('Yakin ingin menghapus task ini?')) return;
