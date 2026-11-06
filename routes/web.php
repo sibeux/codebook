@@ -21,7 +21,7 @@ Route::middleware('guest')->group(function () {
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
 // Workspace Protected Routes
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'sso.token.active'])->group(function () {
     Route::get('/', [WorkspaceController::class, 'index'])->name('workspace');
 
     // Folders

@@ -6,6 +6,7 @@ use App\Models\Folder;
 use App\Models\Note;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
 
 class CodebookTest extends TestCase
@@ -50,6 +51,64 @@ class CodebookTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('General');
         $response->assertSee('First Note');
+    }
+
+    public function test_user_with_expired_sso_jwt_is_logged_out_and_redirected_to_login(): void
+    {
+        Http::fake([
+            'cybeat.sibeux.my.id/api/auth/refresh' => Http::response(['status' => 'error'], 401),
+        ]);
+
+        $user = User::create([
+            'email' => 'expired@sibeux.my.id',
+            'name' => 'Expired User',
+            'password' => bcrypt('password'),
+            'role' => 'user',
+        ]);
+        $payload = rtrim(strtr(base64_encode(json_encode(['exp' => time() - 60])), '+/', '-_'), '=');
+        $expiredToken = 'header.'.$payload.'.signature';
+
+        $response = $this->actingAs($user)->withSession([
+            'sso_access_token' => $expiredToken,
+            'sso_refresh_token' => 'refresh-token',
+        ])->get('/');
+
+        $response->assertRedirect('/login');
+        $this->assertGuest();
+    }
+
+    public function test_user_with_expired_access_token_gets_a_new_token_pair(): void
+    {
+        Http::fake([
+            'cybeat.sibeux.my.id/api/auth/refresh' => Http::response([
+                'status' => 'success',
+                'access_token' => 'new-access-token',
+                'refresh_token' => 'rotated-refresh-token',
+            ]),
+        ]);
+
+        $user = User::create([
+            'email' => 'refreshed@sibeux.my.id',
+            'name' => 'Refreshed User',
+            'password' => bcrypt('password'),
+            'role' => 'user',
+        ]);
+        $payload = rtrim(strtr(base64_encode(json_encode(['exp' => time() - 60])), '+/', '-_'), '=');
+        $expiredToken = 'header.'.$payload.'.signature';
+
+        $response = $this->actingAs($user)->withSession([
+            'sso_access_token' => $expiredToken,
+            'sso_refresh_token' => 'current-refresh-token',
+        ])->get('/');
+
+        $response->assertOk();
+        $response->assertSessionHas('sso_access_token', 'new-access-token');
+        $response->assertSessionHas('sso_refresh_token', 'rotated-refresh-token');
+        $this->assertAuthenticatedAs($user);
+        Http::assertSent(fn ($request): bool => $request->method() === 'POST'
+            && $request->url() === 'https://cybeat.sibeux.my.id/api/auth/refresh'
+            && $request->hasHeader('Authorization', 'Bearer current-refresh-token')
+            && $request->body() === '');
     }
 
     public function test_user_can_create_and_delete_message(): void
