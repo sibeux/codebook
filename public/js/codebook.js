@@ -90,6 +90,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     const thread = document.getElementById('thread');
+    const threadScrollTopButton = document.getElementById('thread-scroll-top');
     const emptyState = document.getElementById('empty-state');
     const emptyStateText = document.getElementById('empty-state-text');
     const noNoteState = document.getElementById('no-note-state');
@@ -103,6 +104,18 @@ document.addEventListener('DOMContentLoaded', function () {
     const fontSizeOut = document.getElementById('font-size-out');
     const hljsDark = document.getElementById('hljs-dark');
     const hljsLight = document.getElementById('hljs-light');
+
+    if (thread && threadScrollTopButton) {
+        const updateThreadScrollTopButton = function () {
+            threadScrollTopButton.hidden = thread.scrollTop < 240;
+        };
+
+        thread.addEventListener('scroll', updateThreadScrollTopButton, { passive: true });
+        threadScrollTopButton.addEventListener('click', function () {
+            thread.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+        updateThreadScrollTopButton();
+    }
 
     let currentSender = 'me';
     let messages = window.INITIAL_MESSAGES || [];

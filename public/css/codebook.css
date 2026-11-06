@@ -794,6 +794,33 @@ body.is-drag-active .root-dropzone {
   position: relative;
 }
 
+.thread-scroll-top {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--text);
+  background: var(--panel);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease;
+}
+.thread-scroll-top:hover {
+  background: var(--panel-hover);
+  transform: translateY(-2px);
+}
+.thread-scroll-top[hidden] {
+  display: none;
+}
+
 /* Thread Top Progress Bar */
 .thread-loading-bar {
   position: absolute;

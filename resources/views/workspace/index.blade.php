@@ -156,6 +156,10 @@
             </div>
         </div>
 
+        <button type="button" class="thread-scroll-top" id="thread-scroll-top" aria-label="Kembali ke pesan paling atas" title="Ke pesan paling atas" hidden>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/><path d="M12 9v12"/></svg>
+        </button>
+
         <div class="thread-loader-overlay" id="thread-loader-overlay" aria-live="polite">
             <div class="thread-loader-content">
                 <div class="thread-loader-spinner"></div>

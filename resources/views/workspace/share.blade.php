@@ -111,6 +111,40 @@
     #share-thread .row.other .bubble-wrap {
         align-items: flex-start;
     }
+    .share-scroll-top {
+        position: fixed;
+        right: 24px;
+        bottom: 24px;
+        z-index: 30;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        border: 1px solid var(--border);
+        border-radius: 50%;
+        color: var(--text);
+        background: var(--panel);
+        box-shadow: var(--shadow-md);
+        cursor: pointer;
+        transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease;
+    }
+    .share-scroll-top:hover {
+        background: var(--panel-hover);
+        transform: translateY(-2px);
+    }
+    .share-scroll-top[hidden] {
+        display: none;
+    }
+    @media (max-width: 600px) {
+        .share-scroll-top {
+            right: 16px;
+            bottom: 16px;
+            width: 40px;
+            height: 40px;
+        }
+    }
 </style>
 @endsection
 
@@ -202,6 +236,9 @@
             @endif
         </div>
     </div>
+    <button type="button" class="share-scroll-top" id="share-scroll-top" aria-label="Kembali ke pesan paling atas" title="Ke pesan paling atas" hidden>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m18 15-6-6-6 6"/><path d="M12 9v12"/></svg>
+    </button>
 </main>
 @endsection
 
@@ -357,6 +394,20 @@
         const fontSlider = document.getElementById('font-size');
         const fontOut = document.getElementById('font-size-out');
         const thread = document.getElementById('share-thread');
+        const shareMain = document.querySelector('main');
+        const scrollTopButton = document.getElementById('share-scroll-top');
+
+        if (shareMain && scrollTopButton) {
+            const updateScrollTopButton = function () {
+                scrollTopButton.hidden = shareMain.scrollTop < 240;
+            };
+
+            shareMain.addEventListener('scroll', updateScrollTopButton, { passive: true });
+            scrollTopButton.addEventListener('click', function () {
+                shareMain.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+            updateScrollTopButton();
+        }
 
         if (fontSlider && fontOut) {
             const savedSize = localStorage.getItem('codebook_font_size') || '14.5';
