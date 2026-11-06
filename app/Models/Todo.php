@@ -15,6 +15,7 @@ class Todo extends Model
         'user_id',
         'todo_project_id',
         'todo_list_id',
+        'position',
         'title',
         'description',
         'status',

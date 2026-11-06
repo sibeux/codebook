@@ -6,10 +6,12 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class TodoList extends Model
 {
     use HasFactory;
+    use SoftDeletes;
 
     public const SYSTEM_LISTS = [
         'todo' => ['name' => 'To do', 'color' => '#94a3b8', 'position' => 0],
@@ -29,10 +31,18 @@ class TodoList extends Model
     public static function ensureSystemLists(User $user): void
     {
         foreach (self::SYSTEM_LISTS as $status => $attributes) {
-            self::firstOrCreate(
-                ['user_id' => $user->user_id, 'system_status' => $status],
-                $attributes,
-            );
+            $listExists = self::withTrashed()
+                ->where('user_id', $user->user_id)
+                ->where('system_status', $status)
+                ->exists();
+
+            if (! $listExists) {
+                self::create([
+                    'user_id' => $user->user_id,
+                    'system_status' => $status,
+                    ...$attributes,
+                ]);
+            }
         }
     }
 

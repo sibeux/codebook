@@ -46,10 +46,12 @@ Route::middleware(['auth', 'sso.token.active'])->group(function () {
     Route::get('/todos', [TodoController::class, 'index'])->name('todos.index');
     Route::post('/todos/lists', [TodoController::class, 'storeList'])->name('todos.lists.store');
     Route::put('/todos/lists/{todoList}', [TodoController::class, 'updateList'])->name('todos.lists.update');
+    Route::put('/todos/lists/{todoList}/cards/reorder', [TodoController::class, 'reorderCards'])->name('todos.lists.reorder');
     Route::delete('/todos/lists/{todoList}', [TodoController::class, 'deleteList'])->name('todos.lists.destroy');
     Route::post('/todos/projects', [TodoController::class, 'storeProject'])->name('todos.projects.store');
     Route::delete('/todos/projects/{project}', [TodoController::class, 'deleteProject'])->name('todos.projects.destroy');
     Route::post('/todos', [TodoController::class, 'store'])->name('todos.store');
+    Route::put('/todos/cards/reorder', [TodoController::class, 'reorderCards'])->name('todos.cards.reorder');
     Route::get('/todos/{todo}', [TodoController::class, 'show'])->name('todos.show');
     Route::put('/todos/{todo}', [TodoController::class, 'update'])->name('todos.update');
     Route::delete('/todos/{todo}', [TodoController::class, 'destroy'])->name('todos.destroy');

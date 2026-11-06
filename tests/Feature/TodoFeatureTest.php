@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Todo;
+use App\Models\TodoList;
 use App\Models\TodoProject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -200,5 +201,234 @@ class TodoFeatureTest extends TestCase
             'id' => $todo->id,
             'todo_project_id' => null,
         ]);
+    }
+
+    public function test_user_can_delete_all_default_lists_and_keep_tasks_unassigned(): void
+    {
+        $user = $this->makeUser();
+        $this->actingAs($user)->get(route('todos.index'))->assertOk();
+
+        $todoList = TodoList::where('user_id', $user->user_id)
+            ->where('system_status', 'todo')
+            ->firstOrFail();
+        $todo = Todo::create([
+            'user_id' => $user->user_id,
+            'todo_list_id' => $todoList->id,
+            'title' => 'Keep this task',
+        ]);
+        $todoLists = TodoList::where('user_id', $user->user_id)->get();
+
+        foreach ($todoLists as $todoList) {
+            $this->deleteJson(route('todos.lists.destroy', $todoList))
+                ->assertOk()
+                ->assertJsonPath('success', true);
+
+            $this->assertDatabaseMissing('todo_lists', [
+                'id' => $todoList->id,
+                'deleted_at' => null,
+            ]);
+        }
+
+        $this->assertDatabaseHas('todos', [
+            'id' => $todo->id,
+            'todo_list_id' => null,
+        ]);
+
+        $this->putJson(route('todos.update', $todo), [
+            'todo_list_id' => $todoLists->first()->id,
+        ])->assertUnprocessable()->assertJsonValidationErrors('todo_list_id');
+
+        $this->postJson(route('todos.store'), [
+            'title' => 'New unassigned task',
+            'todo_list_id' => null,
+        ])->assertOk()->assertJsonPath('todo.todo_list_id', null);
+
+        $response = $this->get(route('todos.index'));
+
+        $response->assertOk()
+            ->assertSee('Unassigned')
+            ->assertSee('Keep this task');
+        $this->assertSame(0, TodoList::where('user_id', $user->user_id)->count());
+        $this->assertDatabaseHas('todos', [
+            'title' => 'New unassigned task',
+            'todo_list_id' => null,
+        ]);
+    }
+
+    public function test_user_cannot_delete_another_users_list(): void
+    {
+        $owner = $this->makeUser();
+        $this->actingAs($owner)->get(route('todos.index'))->assertOk();
+        $otherUser = User::create([
+            'email' => 'list-owner@sibeux.my.id',
+            'name' => 'List Owner',
+            'password' => bcrypt('password'),
+            'role' => 'user',
+        ]);
+        $otherList = TodoList::create([
+            'user_id' => $otherUser->user_id,
+            'name' => 'Private list',
+        ]);
+
+        $response = $this->actingAs($owner)->deleteJson(route('todos.lists.destroy', $otherList));
+
+        $response->assertForbidden();
+        $this->assertDatabaseHas('todo_lists', [
+            'id' => $otherList->id,
+            'deleted_at' => null,
+        ]);
+    }
+
+    public function test_user_can_reorder_cards_within_a_list(): void
+    {
+        $user = $this->makeUser();
+        $this->actingAs($user)->get(route('todos.index'))->assertOk();
+        $todoList = TodoList::where('user_id', $user->user_id)
+            ->where('system_status', 'todo')
+            ->firstOrFail();
+        $firstTodo = Todo::create([
+            'user_id' => $user->user_id,
+            'todo_list_id' => $todoList->id,
+            'title' => 'First card',
+            'position' => 0,
+        ]);
+        $secondTodo = Todo::create([
+            'user_id' => $user->user_id,
+            'todo_list_id' => $todoList->id,
+            'title' => 'Second card',
+            'position' => 1,
+        ]);
+
+        $response = $this->actingAs($user)->putJson(route('todos.cards.reorder'), [
+            'todo_ids' => [$secondTodo->id, $firstTodo->id],
+            'todo_list_id' => $todoList->id,
+        ]);
+
+        $response->assertOk()->assertJsonPath('success', true);
+        $this->assertSame(
+            [$secondTodo->id, $firstTodo->id],
+            Todo::where('todo_list_id', $todoList->id)->orderBy('position')->pluck('id')->all(),
+        );
+        $this->assertDatabaseHas('todos', ['id' => $secondTodo->id, 'position' => 0]);
+        $this->assertDatabaseHas('todos', ['id' => $firstTodo->id, 'position' => 1]);
+    }
+
+    public function test_reordering_a_list_rejects_cards_owned_by_another_user(): void
+    {
+        $user = $this->makeUser();
+        $this->actingAs($user)->get(route('todos.index'))->assertOk();
+        $todoList = TodoList::where('user_id', $user->user_id)
+            ->where('system_status', 'todo')
+            ->firstOrFail();
+        $todo = Todo::create([
+            'user_id' => $user->user_id,
+            'todo_list_id' => $todoList->id,
+            'title' => 'Private card',
+            'position' => 0,
+        ]);
+        $otherUser = User::create([
+            'email' => 'reorder-owner@sibeux.my.id',
+            'name' => 'Other User',
+            'password' => bcrypt('password'),
+            'role' => 'user',
+        ]);
+        $otherTodo = Todo::create([
+            'user_id' => $otherUser->user_id,
+            'title' => 'Other users card',
+            'position' => 0,
+        ]);
+
+        $response = $this->putJson(route('todos.cards.reorder'), [
+            'todo_ids' => [$todo->id, $otherTodo->id],
+            'todo_list_id' => $todoList->id,
+        ]);
+
+        $response->assertUnprocessable();
+        $this->assertDatabaseHas('todos', [
+            'id' => $todo->id,
+            'position' => 0,
+            'todo_list_id' => $todoList->id,
+        ]);
+    }
+
+    public function test_reordering_project_filtered_cards_preserves_hidden_card_positions(): void
+    {
+        $user = $this->makeUser();
+        $this->actingAs($user)->get(route('todos.index'))->assertOk();
+        $todoList = TodoList::where('user_id', $user->user_id)
+            ->where('system_status', 'todo')
+            ->firstOrFail();
+        $project = TodoProject::create([
+            'user_id' => $user->user_id,
+            'name' => 'Visible project',
+        ]);
+        $otherProject = TodoProject::create([
+            'user_id' => $user->user_id,
+            'name' => 'Hidden project',
+        ]);
+        $firstVisibleTodo = Todo::create([
+            'user_id' => $user->user_id,
+            'todo_project_id' => $project->id,
+            'todo_list_id' => $todoList->id,
+            'title' => 'First visible card',
+            'position' => 0,
+        ]);
+        $hiddenTodo = Todo::create([
+            'user_id' => $user->user_id,
+            'todo_project_id' => $otherProject->id,
+            'todo_list_id' => $todoList->id,
+            'title' => 'Hidden card',
+            'position' => 1,
+        ]);
+        $secondVisibleTodo = Todo::create([
+            'user_id' => $user->user_id,
+            'todo_project_id' => $project->id,
+            'todo_list_id' => $todoList->id,
+            'title' => 'Second visible card',
+            'position' => 2,
+        ]);
+
+        $response = $this->putJson(route('todos.cards.reorder'), [
+            'todo_ids' => [$secondVisibleTodo->id, $firstVisibleTodo->id],
+            'todo_list_id' => $todoList->id,
+            'project_id' => $project->id,
+        ]);
+
+        $response->assertOk()->assertJsonPath('success', true);
+        $this->assertSame(
+            [$secondVisibleTodo->id, $hiddenTodo->id, $firstVisibleTodo->id],
+            Todo::where('todo_list_id', $todoList->id)->orderBy('position')->pluck('id')->all(),
+        );
+    }
+
+    public function test_user_can_reorder_unassigned_cards(): void
+    {
+        $user = $this->makeUser();
+        $firstTodo = Todo::create([
+            'user_id' => $user->user_id,
+            'title' => 'First unassigned card',
+            'position' => 0,
+        ]);
+        $secondTodo = Todo::create([
+            'user_id' => $user->user_id,
+            'title' => 'Second unassigned card',
+            'position' => 1,
+        ]);
+
+        $response = $this->actingAs($user)->putJson(route('todos.cards.reorder'), [
+            'todo_ids' => [$secondTodo->id, $firstTodo->id],
+            'todo_list_id' => null,
+        ]);
+
+        $response->assertOk()->assertJsonPath('success', true);
+        $this->assertSame(
+            [$secondTodo->id, $firstTodo->id],
+            Todo::whereNull('todo_list_id')->orderBy('position')->pluck('id')->all(),
+        );
+
+        $this->actingAs($user)->get(route('todos.index'))
+            ->assertOk()
+            ->assertSee('ondrop="dropTodoCard(event, null)"', false)
+            ->assertSee('draggable="true" ondragstart="startTodoDrag(event, '.$firstTodo->id.')"', false);
     }
 }
