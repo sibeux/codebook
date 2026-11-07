@@ -54,7 +54,9 @@ class TodoController extends Controller
             ->orderByRaw("CASE WHEN status = 'done' THEN 2 ELSE 1 END")
             ->latest()
             ->get();
-        $activeTodo = $todos->firstWhere('id', $request->integer('active'));
+        $activeTodo = $currentProject
+            ? $todos->firstWhere('id', $request->integer('active'))
+            : null;
 
         return view('todos.index', [
             'projects' => $projects,

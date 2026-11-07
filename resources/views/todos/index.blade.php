@@ -172,6 +172,53 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     border-right: 1px solid var(--border);
 }
 
+.project-picker {
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    text-align: center;
+}
+
+.project-picker-card {
+    width: min(100%, 480px);
+    padding: 40px 32px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--panel);
+    box-shadow: var(--shadow-sm);
+}
+
+.project-picker-icon {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin: 0 auto 18px;
+    border: 1px solid var(--todo-accent-muted);
+    border-radius: 15px;
+    color: var(--todo-accent);
+    background: var(--todo-accent-soft);
+}
+
+.project-picker h2 {
+    margin: 0 0 9px;
+    color: var(--text);
+    font-size: 20px;
+    letter-spacing: -.03em;
+}
+
+.project-picker p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.7;
+}
+
+@media (max-width: 640px) {
+    .project-picker { padding: 20px; }
+    .project-picker-card { padding: 32px 22px; }
+}
+
 /* Pane 3: Workspace */
 .pane-workspace {
     width: 360px;
@@ -1085,6 +1132,20 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 .form-textarea { resize: vertical; min-height: 72px; }
 .form-select { cursor: pointer; }
 
+.required-marker {
+    margin-left: 6px;
+    color: #dc2626;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.form-textarea.is-invalid {
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, .12);
+}
+
 .modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 
@@ -1143,7 +1204,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     font-size: 13px;
     max-width: 340px;
     padding: 12px 16px;
-    z-index: 1001;
+    z-index: 1200;
     animation: toastIn .2s cubic-bezier(.4,0,.2,1);
 }
 
@@ -1326,6 +1387,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
     </aside>
 
+    @if($currentProject)
     {{-- ===== PANE 2: STATUS BOARD ===== --}}
     <section class="pane-list">
         <div class="pane-header board-header">
@@ -1417,6 +1479,26 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             @endforeach
         </div>
     </section>
+    @else
+    <main class="pane-list project-picker" aria-labelledby="project-picker-title">
+        <div class="project-picker-card">
+            <div class="project-picker-icon" aria-hidden="true">
+                <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h4l2 2h7A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M3 10h18"/></svg>
+            </div>
+            @if($projects->isNotEmpty())
+                <h2 id="project-picker-title">Pilih proyek untuk mulai</h2>
+                <p>Pilih salah satu proyek di daftar untuk melihat tugas dan papan kerjanya.</p>
+            @else
+                <h2 id="project-picker-title">Mulai dengan proyek pertama</h2>
+                <p>Buat proyek untuk mengatur tugas dan aktivitasmu.</p>
+                <button type="button" class="primary-btn" onclick="openNewProjectModal()" style="margin-top:20px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    Buat proyek
+                </button>
+            @endif
+        </div>
+    </main>
+    @endif
     @endif
 
     {{-- ===== TASK DETAIL PAGE ===== --}}
@@ -1641,8 +1723,8 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         @endif
 
         <div class="form-group">
-            <label class="form-label">Task Title</label>
-            <textarea id="task-title-input" class="form-textarea" rows="3" maxlength="255" placeholder="e.g. Fix auth token refresh"></textarea>
+            <label class="form-label" for="task-title-input">Task Title <span class="required-marker">* required</span></label>
+            <textarea id="task-title-input" class="form-textarea" rows="3" maxlength="255" placeholder="e.g. Fix auth token refresh" required aria-required="true"></textarea>
         </div>
         <div class="form-group">
             <label class="form-label">Description</label>
@@ -2003,10 +2085,13 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
     function openNewTaskModal(todoListId = todoSystemListIds.todo) {
         const taskListSelect = document.getElementById('task-list-select');
+        const titleInput = document.getElementById('task-title-input');
         const defaultListId = todoListId ?? todoSystemListIds.todo ?? taskListSelect.options[1]?.value ?? '';
         taskListSelect.value = String(defaultListId);
+        titleInput.classList.remove('is-invalid');
+        titleInput.removeAttribute('aria-invalid');
         document.getElementById('modal-task').style.display = 'flex';
-        document.getElementById('task-title-input').focus();
+        titleInput.focus();
     }
 
     function openNewCommandModal(todoId) {
@@ -2168,9 +2253,16 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         const selectedListId = document.getElementById('task-list-select').value;
         const todo_list_id = selectedListId ? Number(selectedListId) : null;
         if (!title) {
+            const titleInput = document.getElementById('task-title-input');
+            titleInput.classList.add('is-invalid');
+            titleInput.setAttribute('aria-invalid', 'true');
+            titleInput.focus();
             showToast('Judul task wajib diisi.');
             return;
         }
+
+        document.getElementById('task-title-input').classList.remove('is-invalid');
+        document.getElementById('task-title-input').removeAttribute('aria-invalid');
 
         try {
             const res = await todoRequest("{{ route('todos.store') }}", {
@@ -2605,6 +2697,13 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
     bindTodoTitleEditor();
     formatThreadEntryTimes();
+
+    document.addEventListener('input', (event) => {
+        if (event.target.id === 'task-title-input' && event.target.value.trim()) {
+            event.target.classList.remove('is-invalid');
+            event.target.removeAttribute('aria-invalid');
+        }
+    });
 
     async function deleteActiveTask(todoId) {
         if (!confirm('Yakin ingin menghapus task ini?')) return;
