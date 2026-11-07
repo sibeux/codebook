@@ -341,6 +341,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
 .workspace-group { margin: 4px 0 8px; }
 .workspace-group-header { display: flex; align-items: center; gap: 4px; }
+.workspace-group-header:hover .project-menu-toggle, .workspace-group-header .project-actions:focus-within .project-menu-toggle { opacity: 1; visibility: visible; }
 .workspace-link { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding: 8px 9px; border: 1px solid transparent; border-radius: 7px; color: var(--text-secondary); font-size: 12px; font-weight: 650; text-decoration: none; }
 .workspace-link:hover, .workspace-link.active { color: var(--text); background: var(--panel-hover); }
 .workspace-link.active { border-color: var(--border); background: var(--panel); }
@@ -1105,6 +1106,26 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     animation: modalIn .15s cubic-bezier(.4,0,.2,1);
 }
 
+#todo-confirm-modal { z-index: 1300; }
+.todo-confirm-card { box-sizing: border-box; width: min(100%, 410px); padding: 22px; border: 1px solid var(--border); border-radius: 16px; background: var(--panel); box-shadow: 0 24px 72px rgba(0,0,0,.42), 0 0 0 1px rgba(255,255,255,.035); animation: modalIn .16s cubic-bezier(.2,.8,.2,1); }
+.todo-confirm-heading { display: flex; align-items: flex-start; gap: 13px; }
+.todo-confirm-icon { display: grid; flex: 0 0 40px; place-items: center; width: 40px; height: 40px; border: 1px solid rgba(239,68,68,.2); border-radius: 12px; color: #ef4444; background: rgba(239,68,68,.1); }
+.todo-confirm-copy { min-width: 0; padding-top: 1px; }
+.todo-confirm-title { margin: 0; color: var(--text); font-size: 15px; font-weight: 700; letter-spacing: -.02em; }
+.todo-confirm-message { margin: 6px 0 0; color: var(--text-secondary); font-size: 12.5px; line-height: 1.6; overflow-wrap: anywhere; }
+.todo-confirm-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 22px; }
+.todo-confirm-cancel, .todo-confirm-submit { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 13px; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 650; cursor: pointer; transition: background var(--todo-transition), border-color var(--todo-transition), color var(--todo-transition), transform var(--todo-transition); }
+.todo-confirm-cancel { border: 1px solid var(--border); color: var(--text-secondary); background: var(--panel); }
+.todo-confirm-cancel:hover { border-color: var(--border-hover); color: var(--text); background: var(--panel-hover); }
+.todo-confirm-submit { border: 1px solid #dc2626; color: #fff; background: #dc2626; box-shadow: 0 3px 10px rgba(220,38,38,.2); }
+.todo-confirm-submit:hover { border-color: #b91c1c; background: #b91c1c; transform: translateY(-1px); }
+.todo-confirm-cancel:focus-visible, .todo-confirm-submit:focus-visible { outline: 2px solid var(--todo-accent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+    .todo-confirm-card { animation: none; }
+    .todo-confirm-cancel, .todo-confirm-submit { transition: none; }
+}
+
 @keyframes modalIn {
     from { opacity: 0; transform: scale(.96) translateY(4px); }
     to   { opacity: 1; transform: scale(1) translateY(0); }
@@ -1419,6 +1440,14 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
                             <span class="project-link-name">{{ $workspace->name }}</span>
                         </a>
+                        <div class="project-actions">
+                            <button class="project-menu-toggle" type="button" aria-label="Workspace options for {{ $workspace->name }}" aria-haspopup="menu" aria-expanded="false" onclick="toggleTodoProjectMenu(event, this)">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+                            </button>
+                            <div class="project-menu" role="menu" aria-label="Workspace options for {{ $workspace->name }}" hidden>
+                                <button class="project-menu-item" type="button" role="menuitem" data-workspace-id="{{ $workspace->id }}" data-workspace-name="{{ $workspace->name }}" onclick="openEditWorkspaceModal(this)">Rename workspace</button>
+                            </div>
+                        </div>
                         <button class="workspace-toggle" type="button" aria-label="Show projects in {{ $workspace->name }}" aria-expanded="{{ $currentWorkspaceId === $workspace->id ? 'true' : 'false' }}" onclick="toggleWorkspaceProjects(this, {{ $workspace->id }})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
                     </div>
                     <div class="workspace-projects" id="workspace-projects-{{ $workspace->id }}" {{ $currentWorkspaceId === $workspace->id ? '' : 'hidden' }}>
@@ -1718,13 +1747,14 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 <div id="modal-workspace" class="todo-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="workspace-modal-title">
     <div class="todo-modal" style="max-width:340px;">
         <h3 class="todo-modal-title" id="workspace-modal-title">New Workspace</h3>
+        <input type="hidden" id="workspace-id-input" value="">
         <div class="form-group">
             <label class="form-label" for="workspace-name-input">Workspace name</label>
             <input type="text" id="workspace-name-input" class="form-input" maxlength="100" placeholder="e.g. Product, Personal">
         </div>
         <div class="modal-footer">
             <button class="icon-btn" onclick="closeModals()">Cancel</button>
-            <button class="primary-btn" onclick="submitNewWorkspace()">Create workspace</button>
+            <button class="primary-btn" id="workspace-submit-button" onclick="submitNewWorkspace()">Create workspace</button>
         </div>
     </div>
 </div>
@@ -1830,6 +1860,24 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     </div>
 </div>
 
+<div id="todo-confirm-modal" class="todo-modal-overlay" role="presentation" aria-hidden="true" onclick="resolveTodoAction(false)">
+    <section class="todo-confirm-card" role="alertdialog" aria-modal="true" aria-labelledby="todo-confirm-title" aria-describedby="todo-confirm-message" onclick="event.stopPropagation()">
+        <div class="todo-confirm-heading">
+            <div class="todo-confirm-icon" aria-hidden="true">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>
+            </div>
+            <div class="todo-confirm-copy">
+                <h2 class="todo-confirm-title" id="todo-confirm-title">Hapus item?</h2>
+                <p class="todo-confirm-message" id="todo-confirm-message">Tindakan ini tidak dapat dibatalkan.</p>
+            </div>
+        </div>
+        <div class="todo-confirm-footer">
+            <button class="todo-confirm-cancel" id="todo-confirm-cancel" type="button" onclick="resolveTodoAction(false)">Batal</button>
+            <button class="todo-confirm-submit" id="todo-confirm-submit" type="button" onclick="resolveTodoAction(true)">Hapus</button>
+        </div>
+    </section>
+</div>
+
 <div id="todo-toast" class="todo-toast" role="alert" aria-live="assertive"></div>
 @endsection
 
@@ -1850,6 +1898,8 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     let todoWorkspaceSnapshot = null;
     let todoBoardSnapshot = null;
     let todoModalFocusAfterCloseId = null;
+    let todoConfirmResolver = null;
+    let todoConfirmTrigger = null;
 
     function setTodoLoading(isLoading) {
         const loadingBar = document.getElementById('todo-loading-bar');
@@ -1928,6 +1978,43 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         toast.classList.add('visible');
         window.clearTimeout(showToast.timeout);
         showToast.timeout = window.setTimeout(() => toast.classList.remove('visible'), 4000);
+    }
+
+    function confirmTodoAction({ title, message, confirmLabel = 'Hapus' }) {
+        if (todoConfirmResolver) {
+            resolveTodoAction(false, false);
+        }
+
+        return new Promise((resolve) => {
+            const modal = document.getElementById('todo-confirm-modal');
+            todoConfirmResolver = resolve;
+            todoConfirmTrigger = document.activeElement;
+            document.getElementById('todo-confirm-title').textContent = title;
+            document.getElementById('todo-confirm-message').textContent = message;
+            document.getElementById('todo-confirm-submit').textContent = confirmLabel;
+            modal.setAttribute('aria-hidden', 'false');
+            modal.style.display = 'flex';
+            document.getElementById('todo-confirm-cancel').focus();
+        });
+    }
+
+    function resolveTodoAction(confirmed, restoreFocus = true) {
+        if (!todoConfirmResolver) {
+            return;
+        }
+
+        const resolve = todoConfirmResolver;
+        const trigger = todoConfirmTrigger;
+        const modal = document.getElementById('todo-confirm-modal');
+        todoConfirmResolver = null;
+        todoConfirmTrigger = null;
+        modal.style.display = 'none';
+        modal.setAttribute('aria-hidden', 'true');
+        resolve(confirmed);
+
+        if (!confirmed && restoreFocus && trigger?.isConnected) {
+            trigger.focus();
+        }
     }
 
     function closeTodoListMenus(returnFocus = false) {
@@ -2235,6 +2322,9 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     }
 
     function closeModals() {
+        resolveTodoAction(false, false);
+        document.getElementById('todo-confirm-modal').style.display = 'none';
+        document.getElementById('todo-confirm-modal').setAttribute('aria-hidden', 'true');
         document.getElementById('modal-workspace').style.display = 'none';
         document.getElementById('modal-project').style.display = 'none';
         document.getElementById('modal-list').style.display = 'none';
@@ -2243,8 +2333,23 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     }
 
     function openNewWorkspaceModal() {
+        document.getElementById('workspace-modal-title').textContent = 'New Workspace';
+        document.getElementById('workspace-id-input').value = '';
+        document.getElementById('workspace-name-input').value = '';
+        document.getElementById('workspace-submit-button').textContent = 'Create workspace';
         document.getElementById('modal-workspace').style.display = 'flex';
         document.getElementById('workspace-name-input').focus();
+    }
+
+    function openEditWorkspaceModal(button) {
+        closeTodoProjectMenus();
+        document.getElementById('workspace-modal-title').textContent = 'Rename Workspace';
+        document.getElementById('workspace-id-input').value = button.dataset.workspaceId;
+        document.getElementById('workspace-name-input').value = button.dataset.workspaceName;
+        document.getElementById('workspace-submit-button').textContent = 'Save changes';
+        document.getElementById('modal-workspace').style.display = 'flex';
+        document.getElementById('workspace-name-input').focus();
+        document.getElementById('workspace-name-input').select();
     }
 
     function openNewProjectModal(workspaceId = currentWorkspaceId) {
@@ -2332,14 +2437,20 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         const projectId = Number(button.dataset.projectId);
         const workspaceId = Number(button.dataset.workspaceId);
         const projectName = button.dataset.projectName;
-        closeTodoProjectMenus();
+        closeTodoProjectMenus(true);
 
         if (Number(button.dataset.projectCardCount) > 0) {
             showToast(`Hapus semua kartu di "${projectName}" sebelum menghapus proyek.`);
             return;
         }
 
-        if (!confirm(`Delete empty project "${projectName}"?`)) {
+        const confirmed = await confirmTodoAction({
+            title: 'Hapus proyek?',
+            message: `Proyek "${projectName}" kosong dan akan dihapus.`,
+            confirmLabel: 'Hapus proyek',
+        });
+
+        if (!confirmed) {
             return;
         }
 
@@ -2361,6 +2472,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
     async function submitNewWorkspace() {
         const name = document.getElementById('workspace-name-input').value.trim();
+        const workspaceId = Number(document.getElementById('workspace-id-input').value) || null;
 
         if (!name) {
             showToast('Nama workspace wajib diisi.');
@@ -2369,13 +2481,18 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         }
 
         try {
-            const response = await todoRequest("{{ route('todos.workspaces.store') }}", {
-                method: 'POST',
+            const response = await todoRequest(workspaceId ? `/todos/workspaces/${workspaceId}` : "{{ route('todos.workspaces.store') }}", {
+                method: workspaceId ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                 body: JSON.stringify({ name })
             });
-            const payload = await response.json();
-            await refreshTodoShell(`{{ route('todos.index') }}?workspace_id=${payload.workspace.id}`, { pushState: true });
+
+            if (workspaceId) {
+                await refreshTodoShell();
+            } else {
+                const payload = await response.json();
+                await refreshTodoShell(`{{ route('todos.index') }}?workspace_id=${payload.workspace.id}`, { pushState: true });
+            }
         } catch (error) {
             showToast(error.message);
         }
@@ -2489,9 +2606,15 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     }
 
     async function deleteTodoList(todoListId) {
-        closeTodoListMenus();
+        closeTodoListMenus(true);
 
-        if (!confirm('Delete this list? Cards will return to their status lists.')) {
+        const confirmed = await confirmTodoAction({
+            title: 'Hapus daftar?',
+            message: 'Kartu di daftar ini akan kembali ke daftar statusnya. Daftar yang dihapus tidak dapat digunakan lagi.',
+            confirmLabel: 'Hapus daftar',
+        });
+
+        if (!confirmed) {
             return;
         }
 
@@ -2967,7 +3090,19 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     });
 
     async function deleteActiveTask(todoId) {
-        if (!confirm('Yakin ingin menghapus task ini?')) return;
+        const taskTitle = document.getElementById('ws-task-title')?.textContent.trim();
+        const confirmed = await confirmTodoAction({
+            title: 'Hapus task?',
+            message: taskTitle
+                ? `Task "${taskTitle}" dan item terkait akan dihapus permanen.`
+                : 'Task dan item terkait akan dihapus permanen.',
+            confirmLabel: 'Hapus task',
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
         try {
             await todoRequest(`/todos/${todoId}`, {
                 method: 'DELETE',
@@ -3098,7 +3233,16 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     }
 
     async function deleteItem(itemId) {
-        if (!confirm('Hapus item ini?')) return;
+        const confirmed = await confirmTodoAction({
+            title: 'Hapus item?',
+            message: 'Item ini akan dihapus permanen.',
+            confirmLabel: 'Hapus item',
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
         try {
             await todoRequest(`/todos/items/${itemId}`, {
                 method: 'DELETE',
@@ -3126,9 +3270,31 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
+            if (todoConfirmResolver) {
+                event.preventDefault();
+                resolveTodoAction(false);
+                return;
+            }
+
             closeModals();
             closeTodoListMenus(true);
             closeTodoProjectMenus(true);
+
+            return;
+        }
+
+        if (event.key === 'Tab' && todoConfirmResolver) {
+            const modal = document.getElementById('todo-confirm-modal');
+            const cancelButton = document.getElementById('todo-confirm-cancel');
+            const submitButton = document.getElementById('todo-confirm-submit');
+
+            if (event.shiftKey && (document.activeElement === cancelButton || !modal.contains(document.activeElement))) {
+                event.preventDefault();
+                submitButton.focus();
+            } else if (!event.shiftKey && (document.activeElement === submitButton || !modal.contains(document.activeElement))) {
+                event.preventDefault();
+                cancelButton.focus();
+            }
         }
     });
 

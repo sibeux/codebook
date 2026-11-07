@@ -230,6 +230,19 @@ class TodoController extends Controller
         return response()->json(['success' => true, 'workspace' => $workspace]);
     }
 
+    public function updateWorkspace(Request $request, TodoWorkspace $workspace): JsonResponse
+    {
+        abort_unless($workspace->user_id === $request->user()->user_id, 403);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+        ]);
+
+        $workspace->update($validated);
+
+        return response()->json(['success' => true, 'workspace' => $workspace->fresh()]);
+    }
+
     public function deleteProject(Request $request, TodoProject $project): JsonResponse
     {
         abort_unless($project->user_id === $request->user()->user_id, 403);
