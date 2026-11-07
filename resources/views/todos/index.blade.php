@@ -1467,7 +1467,8 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                                         <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
                                     </button>
                                     <div class="project-menu" role="menu" aria-label="Project options for {{ $p->name }}" hidden>
-                                        <button class="project-menu-item" type="button" role="menuitem" data-project-id="{{ $p->id }}" data-project-name="{{ $p->name }}" data-project-color="{{ $p->color }}" data-workspace-id="{{ $workspace->id }}" onclick="openEditProjectModal(this)">Rename project</button>
+                                        <button class="project-menu-item" type="button" role="menuitem" data-project-id="{{ $p->id }}" data-project-name="{{ $p->name }}" data-project-color="{{ $p->color }}" data-workspace-id="{{ $workspace->id }}" onclick="openEditProjectModal(this)">Edit project</button>
+                                        <button class="project-menu-item" type="button" role="menuitem" data-project-id="{{ $p->id }}" data-project-name="{{ $p->name }}" data-project-color="{{ $p->color }}" data-workspace-id="{{ $workspace->id }}" onclick="openEditProjectModal(this, true)">Move to workspace</button>
                                         <button class="project-menu-item danger" type="button" role="menuitem" data-project-id="{{ $p->id }}" data-project-name="{{ $p->name }}" data-project-card-count="{{ $p->todos_count }}" data-workspace-id="{{ $workspace->id }}" onclick="deleteTodoProject(this)">Delete project</button>
                                     </div>
                                 </div>
@@ -1764,9 +1765,16 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     <div class="todo-modal" style="max-width:340px;">
         <h3 class="todo-modal-title" id="project-modal-title">New Project</h3>
         <input type="hidden" id="project-id-input" value="">
-        <input type="hidden" id="project-workspace-id" value="{{ $currentWorkspaceId }}">
         <div class="form-group">
-            <label class="form-label">Project Name</label>
+            <label class="form-label" for="project-workspace-id">Workspace</label>
+            <select id="project-workspace-id" class="form-select">
+                @foreach($workspaces as $ws)
+                    <option value="{{ $ws->id }}">{{ $ws->name }}{{ $ws->is_default ? ' (Default)' : '' }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="form-group">
+            <label class="form-label" for="project-name-input">Project Name</label>
             <input type="text" id="project-name-input" class="form-input" placeholder="e.g. Codebook, API Client">
         </div>
         <div class="form-group">
@@ -2356,7 +2364,10 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     function openNewProjectModal(workspaceId = currentWorkspaceId) {
         document.getElementById('project-modal-title').textContent = 'New Project';
         document.getElementById('project-id-input').value = '';
-        document.getElementById('project-workspace-id').value = String(workspaceId ?? '');
+        const wsSelect = document.getElementById('project-workspace-id');
+        if (wsSelect) {
+            wsSelect.value = String(workspaceId ?? currentWorkspaceId ?? wsSelect.options[0]?.value ?? '');
+        }
         document.getElementById('project-name-input').value = '';
         document.getElementById('project-color-input').value = '#6366f1';
         document.getElementById('project-submit-button').textContent = 'Create Project';
@@ -2364,17 +2375,24 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         document.getElementById('project-name-input').focus();
     }
 
-    function openEditProjectModal(button) {
+    function openEditProjectModal(button, focusWorkspace = false) {
         closeTodoProjectMenus();
-        document.getElementById('project-modal-title').textContent = 'Rename Project';
+        document.getElementById('project-modal-title').textContent = 'Edit Project';
         document.getElementById('project-id-input').value = button.dataset.projectId;
-        document.getElementById('project-workspace-id').value = button.dataset.workspaceId;
+        const wsSelect = document.getElementById('project-workspace-id');
+        if (wsSelect) {
+            wsSelect.value = String(button.dataset.workspaceId);
+        }
         document.getElementById('project-name-input').value = button.dataset.projectName;
         document.getElementById('project-color-input').value = button.dataset.projectColor;
         document.getElementById('project-submit-button').textContent = 'Save changes';
         document.getElementById('modal-project').style.display = 'flex';
-        document.getElementById('project-name-input').focus();
-        document.getElementById('project-name-input').select();
+        if (focusWorkspace && wsSelect) {
+            wsSelect.focus();
+        } else {
+            document.getElementById('project-name-input').focus();
+            document.getElementById('project-name-input').select();
+        }
     }
 
     function toggleWorkspaceProjects(button, workspaceId) {
@@ -2423,11 +2441,19 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                 body: JSON.stringify({ name, color, workspace_id })
             });
 
+            const payload = await response.json();
+            closeModals();
+
             if (projectId) {
-                await refreshTodoShell();
+                const targetWorkspaceId = payload.project?.workspace_id || workspace_id;
+                const nextUrl = (currentProjectId === projectId)
+                    ? `{{ route('todos.index') }}?workspace_id=${targetWorkspaceId}&project_id=${projectId}`
+                    : (currentWorkspaceId ? `{{ route('todos.index') }}?workspace_id=${currentWorkspaceId}${currentProjectId ? `&project_id=${currentProjectId}` : ''}` : undefined);
+                await refreshTodoShell(nextUrl, { pushState: true });
+                showToast('Project berhasil diperbarui.');
             } else {
-                const payload = await response.json();
                 await refreshTodoShell(`{{ route('todos.index') }}?workspace_id=${workspace_id}&project_id=${payload.project.id}`, { pushState: true });
+                showToast('Project berhasil dibuat.');
             }
         } catch (error) {
             showToast(error.message);

@@ -202,12 +202,23 @@ class TodoController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'workspace_id' => [
+                'nullable',
+                Rule::exists('todo_workspaces', 'id')->where('user_id', $request->user()->user_id),
+            ],
         ]);
 
         $validated['color'] ??= $project->color;
+        if (empty($validated['workspace_id'])) {
+            unset($validated['workspace_id']);
+        }
+
         $project->update($validated);
 
-        return response()->json(['success' => true, 'project' => $project->fresh()]);
+        return response()->json([
+            'success' => true,
+            'project' => $project->fresh()->load('workspace'),
+        ]);
     }
 
     public function storeWorkspace(Request $request): JsonResponse
