@@ -2,7 +2,6 @@
 -- Select the Codebook database and confirm it with SELECT DATABASE() before running.
 -- Run only if the corresponding codebook_* tables exist and original names do not.
 RENAME TABLE
-    `codebook_users` TO `users`,
     `codebook_password_reset_tokens` TO `password_reset_tokens`,
     `codebook_sessions` TO `sessions`,
     `codebook_cache` TO `cache`,

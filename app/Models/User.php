@@ -16,6 +16,15 @@ class User extends Authenticatable
 
     protected $table = 'users';
 
+    public function getConnectionName(): ?string
+    {
+        if (config('database.default') === 'mysql') {
+            return 'mysql_shared';
+        }
+
+        return parent::getConnectionName();
+    }
+
     protected $primaryKey = 'user_id';
 
     public $incrementing = true;

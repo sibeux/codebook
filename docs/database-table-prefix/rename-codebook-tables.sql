@@ -4,7 +4,6 @@ SELECT DATABASE();
 
 -- Stop if any destination table already exists. Do not run this script twice.
 RENAME TABLE
-    `users` TO `codebook_users`,
     `password_reset_tokens` TO `codebook_password_reset_tokens`,
     `sessions` TO `codebook_sessions`,
     `cache` TO `codebook_cache`,

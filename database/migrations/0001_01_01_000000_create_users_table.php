@@ -11,9 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // If users table does not exist (e.g. fresh local dev / sqlite), create it matching Cybeat's schema
-        if (!Schema::hasTable('users')) {
-            Schema::create('users', function (Blueprint $table) {
+        $usersConnection = config('database.default') === 'mysql'
+            ? 'mysql_shared'
+            : config('database.default');
+        $usersSchema = Schema::connection($usersConnection);
+
+        // Use Cybeat's shared, unprefixed users table when running MySQL.
+        if (! $usersSchema->hasTable('users')) {
+            $usersSchema->create('users', function (Blueprint $table) {
                 $table->increments('user_id'); // int(5) UNSIGNED AUTO_INCREMENT PRIMARY KEY
                 $table->string('email', 100)->unique();
                 $table->string('password', 100);
@@ -23,7 +28,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('password_reset_tokens')) {
+        if (! Schema::hasTable('password_reset_tokens')) {
             Schema::create('password_reset_tokens', function (Blueprint $table) {
                 $table->string('email')->primary();
                 $table->string('token');
@@ -31,7 +36,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('sessions')) {
+        if (! Schema::hasTable('sessions')) {
             Schema::create('sessions', function (Blueprint $table) {
                 $table->string('id')->primary();
                 $table->unsignedInteger('user_id')->nullable()->index();

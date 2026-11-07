@@ -1,6 +1,6 @@
 # Codebook Database Table Prefix
 
-Codebook uses the `codebook_` prefix for its database tables. Laravel adds this prefix automatically when the application refers to a logical table name. For example, application code can continue to query `users`, while the physical table in the shared database is named `codebook_users`.
+Codebook uses the `codebook_` prefix for tables it owns. Laravel adds this prefix automatically when the application refers to a logical table name. The `users` table is owned by Cybeat SSO, so it remains unprefixed and Codebook reads it through a separate connection without a table prefix.
 
 ## Rename Existing Tables
 
@@ -26,7 +26,7 @@ The command performs these steps:
 The command currently handles these tables:
 
 ```text
-users, password_reset_tokens, sessions, cache, cache_locks,
+password_reset_tokens, sessions, cache, cache_locks,
 jobs, job_batches, failed_jobs, migrations,
 folders, notes, note_messages, todo_projects, todos, todo_items,
 todo_lists, todo_workspaces
@@ -51,3 +51,5 @@ php artisan migrate --force
 ```
 
 To override the prefix for an environment, set `DB_TABLE_PREFIX` in that environment. Keep the same prefix for every deployment that connects to that database.
+
+Do not rename or create `users` as a Codebook table. It is shared with Cybeat SSO and must stay named `users`.

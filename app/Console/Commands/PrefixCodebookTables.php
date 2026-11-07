@@ -14,7 +14,6 @@ use Illuminate\Support\Facades\Schema;
 class PrefixCodebookTables extends Command
 {
     private const TABLES = [
-        'users',
         'password_reset_tokens',
         'sessions',
         'cache',
