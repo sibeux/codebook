@@ -77,11 +77,13 @@ jobs:
               # Setup symlink storage jika belum ada
               php artisan storage:link 2>/dev/null || true
 
+              # Remove stale caches so migrations use the deployed database prefix.
+              php artisan optimize:clear
+
               # Jalankan migrasi database
               php artisan migrate --force
 
-              # Cache konfigurasi untuk performa optimal di production
-              php artisan optimize:clear
+              # Cache configuration and routes for production.
               php artisan config:cache
               php artisan route:cache
               php artisan view:cache
