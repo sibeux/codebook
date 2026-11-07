@@ -12,6 +12,8 @@ Run the following command from the Codebook project directory:
 php artisan app:prefix-codebook-tables --force
 ```
 
+If the local machine cannot connect to the production MySQL server, run the SQL script in `rename-codebook-tables.sql` from the database hosting panel instead. Select the Codebook database before running it.
+
 The command performs these steps:
 
 1. **Enables maintenance mode.** This prevents web requests from using tables while their names are changing.
