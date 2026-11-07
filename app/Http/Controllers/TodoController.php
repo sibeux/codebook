@@ -156,19 +156,13 @@ class TodoController extends Controller
                 && $todoList->project()->where('user_id', $request->user()->user_id)->exists(),
             403,
         );
-        abort_if($todoList->system_status !== null, 422, 'System lists cannot be deleted.');
-        DB::transaction(function () use ($request, $todoList): void {
-            $project = $todoList->project;
-            $systemLists = TodoList::where('todo_project_id', $project->id)
-                ->whereNotNull('system_status')
-                ->pluck('id', 'system_status');
+        DB::transaction(function () use ($todoList): void {
+            abort_if(
+                Todo::where('todo_list_id', $todoList->id)->exists(),
+                422,
+                'Move or delete every card in this list before deleting it.',
+            );
 
-            Todo::where('user_id', $request->user()->user_id)
-                ->where('todo_list_id', $todoList->id)
-                ->get()
-                ->each(function (Todo $todo) use ($systemLists): void {
-                    $todo->update(['todo_list_id' => $systemLists[$todo->status] ?? $systemLists['todo']]);
-                });
             $todoList->delete();
         });
 
@@ -264,7 +258,7 @@ class TodoController extends Controller
             'description' => ['nullable', 'string'],
             'status' => ['sometimes', 'in:todo,in_progress,blocked,done'],
             'todo_list_id' => [
-                'nullable',
+                'required',
                 Rule::exists('todo_lists', 'id')
                     ->where('todo_project_id', $request->input('todo_project_id'))
                     ->whereNull('deleted_at'),
@@ -273,12 +267,14 @@ class TodoController extends Controller
 
         $project = TodoProject::where('user_id', $request->user()->user_id)->findOrFail($validated['todo_project_id']);
         TodoList::ensureSystemLists($request->user(), $project);
-        $todoList = isset($validated['todo_list_id'])
-            ? TodoList::findOrFail($validated['todo_list_id'])
-            : null;
+        $todoList = TodoList::findOrFail($validated['todo_list_id']);
         $status = $validated['status'] ?? $todoList?->system_status ?? 'todo';
-        $todoList ??= TodoList::where('todo_project_id', $project->id)->where('system_status', $status)->firstOrFail();
-        $position = (int) Todo::where('todo_list_id', $todoList->id)->max('position') + 1;
+
+        $positionQuery = Todo::where('user_id', $request->user()->user_id)
+            ->where('todo_project_id', $project->id);
+        $positionQuery->where('todo_list_id', $todoList->id);
+
+        $position = (int) $positionQuery->max('position') + 1;
 
         $todo = Todo::create([
             'user_id' => $request->user()->user_id,
@@ -329,7 +325,7 @@ class TodoController extends Controller
             'description' => ['sometimes', 'nullable', 'string'],
             'todo_list_id' => [
                 'sometimes',
-                'nullable',
+                'required',
                 Rule::exists('todo_lists', 'id')
                     ->where('todo_project_id', $request->input('todo_project_id', $todo->todo_project_id))
                     ->whereNull('deleted_at'),
@@ -341,29 +337,26 @@ class TodoController extends Controller
         TodoList::ensureSystemLists($request->user(), $project);
 
         if (array_key_exists('todo_project_id', $validated) && (int) $nextProjectId !== $todo->todo_project_id) {
-            $validated['todo_list_id'] = TodoList::where('todo_project_id', $project->id)
+            $targetListId = TodoList::where('todo_project_id', $project->id)
                 ->where('system_status', $validated['status'] ?? $todo->status)
+                ->whereNull('deleted_at')
+                ->value('id') ?? TodoList::where('todo_project_id', $project->id)
+                ->whereNull('deleted_at')
+                ->orderBy('position')
                 ->value('id');
-        } elseif (array_key_exists('todo_list_id', $validated) && $validated['todo_list_id'] === null) {
-            $validated['todo_list_id'] = TodoList::where('todo_project_id', $project->id)
-                ->where('system_status', $validated['status'] ?? $todo->status)
-                ->value('id');
+            abort_if($targetListId === null, 422, 'Create a list in the target project before moving this card.');
+            $validated['todo_list_id'] = $targetListId;
         }
 
-        $nextTodoListId = $validated['todo_list_id'] ?? null;
+        $nextTodoListId = $validated['todo_list_id'] ?? $todo->todo_list_id;
         $todoListChanged = array_key_exists('todo_list_id', $validated)
-            && ($nextTodoListId === null
-                ? $todo->todo_list_id !== null
-                : (int) $nextTodoListId !== $todo->todo_list_id);
+            && (int) $nextTodoListId !== $todo->todo_list_id;
 
         if ($todoListChanged) {
-            $positionQuery = Todo::where('user_id', $request->user()->user_id);
+            $positionQuery = Todo::where('user_id', $request->user()->user_id)
+                ->where('todo_project_id', $project->id);
 
-            if ($nextTodoListId === null) {
-                $positionQuery->whereNull('todo_list_id');
-            } else {
-                $positionQuery->where('todo_list_id', $nextTodoListId);
-            }
+            $positionQuery->where('todo_list_id', $nextTodoListId);
 
             $validated['position'] = (int) $positionQuery->max('position') + 1;
         }
@@ -383,6 +376,7 @@ class TodoController extends Controller
             'todo_ids' => ['required', 'array', 'min:1'],
             'todo_ids.*' => ['required', 'integer', 'distinct'],
             'todo_list_id' => [
+                'present',
                 'required',
                 Rule::exists('todo_lists', 'id')
                     ->where('todo_project_id', $request->input('project_id'))
@@ -398,8 +392,13 @@ class TodoController extends Controller
         $orderedTodoIds = array_map('intval', $validated['todo_ids']);
         $listTodosQuery = Todo::where('user_id', $request->user()->user_id);
 
-        $listTodosQuery->where('todo_list_id', $validated['todo_list_id'])
-            ->where('todo_project_id', $validated['project_id']);
+        if ($validated['todo_list_id'] === null) {
+            $listTodosQuery->whereNull('todo_list_id');
+        } else {
+            $listTodosQuery->where('todo_list_id', $validated['todo_list_id']);
+        }
+
+        $listTodosQuery->where('todo_project_id', $validated['project_id']);
 
         $listTodos = $listTodosQuery->orderBy('position')
             ->orderByRaw("CASE WHEN status = 'done' THEN 2 ELSE 1 END")
@@ -441,8 +440,13 @@ class TodoController extends Controller
             foreach ($completeTodoOrder as $position => $todoId) {
                 $todoQuery = Todo::where('user_id', $request->user()->user_id)->whereKey($todoId);
 
-                $todoQuery->where('todo_list_id', $validated['todo_list_id'])
-                    ->where('todo_project_id', $validated['project_id']);
+                if ($validated['todo_list_id'] === null) {
+                    $todoQuery->whereNull('todo_list_id');
+                } else {
+                    $todoQuery->where('todo_list_id', $validated['todo_list_id']);
+                }
+
+                $todoQuery->where('todo_project_id', $validated['project_id']);
 
                 $todoQuery->update(['position' => $position]);
             }

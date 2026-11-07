@@ -284,6 +284,8 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 .board-list-menu[hidden] { display: none; }
 .board-list-menu-item { display: flex; align-items: center; width: 100%; min-height: 34px; padding: 0 9px; border: 0; border-radius: 6px; color: #ef4444; background: transparent; font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
 .board-list-menu-item:hover { background: rgba(239,68,68,.1); }
+.board-list-menu-item:disabled { color: var(--muted); cursor: not-allowed; opacity: .65; }
+.board-list-menu-item:disabled:hover { background: transparent; }
 .board-column-cards { position: relative; display: flex; flex: 1 1 auto; flex-direction: column; gap: 8px; padding: 9px; overflow-x: hidden; overflow-y: auto; min-height: 54px; scrollbar-gutter: stable; }
 .board-column-empty { padding: 12px 8px; text-align: center; font-size: 10.5px; color: var(--muted); border: 1px dashed var(--border); border-radius: 8px; }
 .board-task-card { display: flex; flex: 0 0 auto; gap: 9px; padding: 11px; min-height: 0; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); box-shadow: 0 1px 2px rgba(0,0,0,.04); cursor: grab; }
@@ -1505,16 +1507,14 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                         <input class="board-column-title-input" id="todo-list-title-input-{{ $column->id }}" type="text" maxlength="80" value="{{ $column->name }}" aria-label="New list name" style="display:none;" onblur="saveTodoListName({{ $column->id }})" onkeydown="handleTodoListNameKeydown(event)">
                         <span class="board-column-count">{{ $columnTodos->count() }}</span>
                         <button class="board-column-add" type="button" onclick="openNewTaskModal({{ $column->id }})" aria-label="Add card to {{ $column->name }}">+</button>
-                        @if(!$column->system_status)
                         <div class="board-column-menu">
                             <button class="board-list-menu-toggle" type="button" aria-label="More options for {{ $column->name }} list" aria-haspopup="menu" aria-expanded="false" onclick="toggleTodoListMenu(event, this)">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="12" cy="19" r="1.8"></circle></svg>
                             </button>
                             <div class="board-list-menu" role="menu" aria-label="List options for {{ $column->name }}" hidden>
-                                <button class="board-list-menu-item" type="button" role="menuitem" onclick="deleteTodoList({{ $column->id }})">Delete list</button>
+                                <button class="board-list-menu-item" type="button" role="menuitem" onclick="deleteTodoList({{ $column->id }})" @if($columnTodos->isNotEmpty()) disabled title="Move or delete all cards first" @endif>Delete list</button>
                             </div>
                         </div>
-                        @endif
                     </header>
                     <div class="board-column-cards">
                         @forelse($columnTodos as $t)
@@ -1821,7 +1821,8 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         </div>
         <div class="form-group">
             <label class="form-label" for="task-list-select">List</label>
-            <select id="task-list-select" class="form-select">
+            <select id="task-list-select" class="form-select" required>
+                <option value="" disabled selected>{{ $todoLists->isEmpty() ? 'Create a list first' : 'Choose a list' }}</option>
                 @foreach($todoLists as $todoList)
                     <option value="{{ $todoList->id }}">{{ $todoList->name }}</option>
                 @endforeach
@@ -2610,7 +2611,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
         const confirmed = await confirmTodoAction({
             title: 'Hapus daftar?',
-            message: 'Kartu di daftar ini akan kembali ke daftar statusnya. Daftar yang dihapus tidak dapat digunakan lagi.',
+            message: 'Daftar kosong ini akan dihapus dan tidak dapat digunakan lagi.',
             confirmLabel: 'Hapus daftar',
         });
 
@@ -2905,6 +2906,25 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             sourceCards.append(emptyState);
         }
 
+        updateTodoListDeleteState(sourceColumn);
+        updateTodoListDeleteState(destinationColumn);
+    }
+
+    function updateTodoListDeleteState(column) {
+        const deleteButton = column?.querySelector('.board-list-menu-item');
+
+        if (!deleteButton) {
+            return;
+        }
+
+        const hasCards = column.querySelector('.board-task-card') !== null;
+        deleteButton.disabled = hasCards;
+
+        if (hasCards) {
+            deleteButton.title = 'Move or delete all cards first';
+        } else {
+            deleteButton.removeAttribute('title');
+        }
     }
 
     async function moveTodoCard(card, todoListId) {
