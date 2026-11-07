@@ -352,6 +352,19 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 .workspace-projects .project-link { padding-block: 6px; font-size: 11.5px; }
 .workspace-create-project { width: 100%; margin-top: 3px; padding: 6px 9px; border: 0; border-radius: 6px; color: var(--muted); background: transparent; font: inherit; font-size: 11px; text-align: left; cursor: pointer; }
 .workspace-create-project:hover { color: var(--text); background: var(--panel-hover); }
+.project-row { display: flex; align-items: center; gap: 2px; }
+.project-row > .project-link { flex: 1; min-width: 0; }
+.project-actions { position: relative; flex: 0 0 auto; }
+.project-menu-toggle { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 6px; color: var(--muted); background: transparent; cursor: pointer; opacity: 0; visibility: visible; }
+.project-row:hover .project-menu-toggle, .project-actions:focus-within .project-menu-toggle, .project-menu-toggle[aria-expanded="true"] { opacity: 1; visibility: visible; }
+.project-menu-toggle:hover, .project-menu-toggle[aria-expanded="true"] { color: var(--text); background: var(--panel-hover); }
+.project-menu-toggle:focus-visible, .project-menu-item:focus-visible { outline: 2px solid var(--todo-accent); outline-offset: 2px; }
+.project-menu { position: absolute; top: calc(100% + 4px); right: 0; z-index: 30; min-width: 156px; padding: 5px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); box-shadow: 0 10px 28px rgba(0,0,0,.18); }
+.project-menu[hidden] { display: none; }
+.project-menu-item { display: flex; align-items: center; width: 100%; min-height: 34px; padding: 0 9px; border: 0; border-radius: 6px; color: var(--text-secondary); background: transparent; font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
+.project-menu-item:hover { color: var(--text); background: var(--panel-hover); }
+.project-menu-item.danger { color: #ef4444; }
+.project-menu-item.danger:hover { background: rgba(239,68,68,.1); }
 
 .project-section-label {
     font-size: 10px;
@@ -1307,6 +1320,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     .project-list-scroll { display: block; flex: 0 0 auto; overflow-x: hidden; overflow-y: auto; padding: 6px 8px; max-height: 180px; }
     .workspace-group { margin: 2px 0 5px; }
     .workspace-projects { padding-left: 8px; }
+    .project-menu-toggle { opacity: 1; visibility: visible; }
     .pane-list { flex: 0 0 390px; width: 100%; border-right: none; }
     .board-header { height: 48px; padding-inline: 14px; }
     .board-scroll { padding: 12px 14px 16px; }
@@ -1392,13 +1406,24 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                     </div>
                     <div class="workspace-projects" id="workspace-projects-{{ $workspace->id }}" {{ $currentWorkspaceId === $workspace->id ? '' : 'hidden' }}>
                         @foreach($workspace->projects as $p)
-                            <a href="{{ route('todos.index', ['workspace_id' => $workspace->id, 'project_id' => $p->id, 'status' => request('status')]) }}" onclick="return navigateTodo(event, this)" class="project-link {{ $currentProject?->id === $p->id ? 'active' : '' }}">
-                                <span class="project-link-left">
-                                    <span class="project-dot" style="background:{{ $p->color }};"></span>
-                                    <span class="project-link-name">{{ $p->name }}</span>
-                                </span>
-                                <span class="project-count-badge project-pending-count" data-project-id="{{ $p->id }}" data-pending-count="{{ $p->pending_count }}" style="{{ $p->pending_count > 0 ? '' : 'display:none;' }}">{{ $p->pending_count }}</span>
-                            </a>
+                            <div class="project-row">
+                                <a href="{{ route('todos.index', ['workspace_id' => $workspace->id, 'project_id' => $p->id, 'status' => request('status')]) }}" onclick="return navigateTodo(event, this)" class="project-link {{ $currentProject?->id === $p->id ? 'active' : '' }}">
+                                    <span class="project-link-left">
+                                        <span class="project-dot" style="background:{{ $p->color }};"></span>
+                                        <span class="project-link-name">{{ $p->name }}</span>
+                                    </span>
+                                    <span class="project-count-badge project-pending-count" data-project-id="{{ $p->id }}" data-pending-count="{{ $p->pending_count }}" style="{{ $p->pending_count > 0 ? '' : 'display:none;' }}">{{ $p->pending_count }}</span>
+                                </a>
+                                <div class="project-actions">
+                                    <button class="project-menu-toggle" type="button" aria-label="Project options for {{ $p->name }}" aria-haspopup="menu" aria-expanded="false" onclick="toggleTodoProjectMenu(event, this)">
+                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+                                    </button>
+                                    <div class="project-menu" role="menu" aria-label="Project options for {{ $p->name }}" hidden>
+                                        <button class="project-menu-item" type="button" role="menuitem" data-project-id="{{ $p->id }}" data-project-name="{{ $p->name }}" data-project-color="{{ $p->color }}" data-workspace-id="{{ $workspace->id }}" onclick="openEditProjectModal(this)">Rename project</button>
+                                        <button class="project-menu-item danger" type="button" role="menuitem" data-project-id="{{ $p->id }}" data-project-name="{{ $p->name }}" data-project-card-count="{{ $p->todos_count }}" data-workspace-id="{{ $workspace->id }}" onclick="deleteTodoProject(this)">Delete project</button>
+                                    </div>
+                                </div>
+                            </div>
                         @endforeach
                         <button class="workspace-create-project" type="button" onclick="openNewProjectModal({{ $workspace->id }})">+ New project</button>
                     </div>
@@ -1691,6 +1716,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 <div id="modal-project" class="todo-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="project-modal-title">
     <div class="todo-modal" style="max-width:340px;">
         <h3 class="todo-modal-title" id="project-modal-title">New Project</h3>
+        <input type="hidden" id="project-id-input" value="">
         <input type="hidden" id="project-workspace-id" value="{{ $currentWorkspaceId }}">
         <div class="form-group">
             <label class="form-label">Project Name</label>
@@ -1702,7 +1728,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         </div>
         <div class="modal-footer">
             <button class="icon-btn" onclick="closeModals()">Cancel</button>
-            <button class="primary-btn" onclick="submitNewProject()">Create Project</button>
+            <button class="primary-btn" id="project-submit-button" onclick="submitNewProject()">Create Project</button>
         </div>
     </div>
 </div>
@@ -1897,9 +1923,32 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         });
     }
 
+    function closeTodoProjectMenus(returnFocus = false) {
+        document.querySelectorAll('.project-menu-toggle[aria-expanded="true"]').forEach((button) => {
+            button.setAttribute('aria-expanded', 'false');
+            button.nextElementSibling.hidden = true;
+
+            if (returnFocus) {
+                button.focus();
+            }
+        });
+    }
+
     function toggleTodoListMenu(event, button) {
         event.stopPropagation();
         const shouldOpen = button.getAttribute('aria-expanded') !== 'true';
+        closeTodoListMenus();
+
+        if (shouldOpen) {
+            button.setAttribute('aria-expanded', 'true');
+            button.nextElementSibling.hidden = false;
+        }
+    }
+
+    function toggleTodoProjectMenu(event, button) {
+        event.stopPropagation();
+        const shouldOpen = button.getAttribute('aria-expanded') !== 'true';
+        closeTodoProjectMenus();
         closeTodoListMenus();
 
         if (shouldOpen) {
@@ -2114,9 +2163,27 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     }
 
     function openNewProjectModal(workspaceId = currentWorkspaceId) {
+        document.getElementById('project-modal-title').textContent = 'New Project';
+        document.getElementById('project-id-input').value = '';
         document.getElementById('project-workspace-id').value = String(workspaceId ?? '');
+        document.getElementById('project-name-input').value = '';
+        document.getElementById('project-color-input').value = '#6366f1';
+        document.getElementById('project-submit-button').textContent = 'Create Project';
         document.getElementById('modal-project').style.display = 'flex';
         document.getElementById('project-name-input').focus();
+    }
+
+    function openEditProjectModal(button) {
+        closeTodoProjectMenus();
+        document.getElementById('project-modal-title').textContent = 'Rename Project';
+        document.getElementById('project-id-input').value = button.dataset.projectId;
+        document.getElementById('project-workspace-id').value = button.dataset.workspaceId;
+        document.getElementById('project-name-input').value = button.dataset.projectName;
+        document.getElementById('project-color-input').value = button.dataset.projectColor;
+        document.getElementById('project-submit-button').textContent = 'Save changes';
+        document.getElementById('modal-project').style.display = 'flex';
+        document.getElementById('project-name-input').focus();
+        document.getElementById('project-name-input').select();
     }
 
     function toggleWorkspaceProjects(button, workspaceId) {
@@ -2152,19 +2219,56 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         const name = document.getElementById('project-name-input').value.trim();
         const color = document.getElementById('project-color-input').value;
         const workspace_id = Number(document.getElementById('project-workspace-id').value) || currentWorkspaceId;
+        const projectId = Number(document.getElementById('project-id-input').value) || null;
         if (!name) {
             showToast('Nama project wajib diisi.');
             return;
         }
 
         try {
-            const response = await todoRequest("{{ route('todos.projects.store') }}", {
-                method: 'POST',
+            const response = await todoRequest(projectId ? `/todos/projects/${projectId}` : "{{ route('todos.projects.store') }}", {
+                method: projectId ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                 body: JSON.stringify({ name, color, workspace_id })
             });
-            const payload = await response.json();
-            await refreshTodoShell(`{{ route('todos.index') }}?workspace_id=${workspace_id}&project_id=${payload.project.id}`, { pushState: true });
+
+            if (projectId) {
+                await refreshTodoShell();
+            } else {
+                const payload = await response.json();
+                await refreshTodoShell(`{{ route('todos.index') }}?workspace_id=${workspace_id}&project_id=${payload.project.id}`, { pushState: true });
+            }
+        } catch (error) {
+            showToast(error.message);
+        }
+    }
+
+    async function deleteTodoProject(button) {
+        const projectId = Number(button.dataset.projectId);
+        const workspaceId = Number(button.dataset.workspaceId);
+        const projectName = button.dataset.projectName;
+        closeTodoProjectMenus();
+
+        if (Number(button.dataset.projectCardCount) > 0) {
+            showToast(`Hapus semua kartu di "${projectName}" sebelum menghapus proyek.`);
+            return;
+        }
+
+        if (!confirm(`Delete empty project "${projectName}"?`)) {
+            return;
+        }
+
+        try {
+            await todoRequest(`/todos/projects/${projectId}`, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-TOKEN': csrfToken },
+            });
+
+            if (currentProjectId === projectId) {
+                await refreshTodoShell(`{{ route('todos.index') }}?workspace_id=${workspaceId}`, { pushState: true });
+            } else {
+                await refreshTodoShell();
+            }
         } catch (error) {
             showToast(error.message);
         }
@@ -2939,12 +3043,17 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         if (event.key === 'Escape') {
             closeModals();
             closeTodoListMenus(true);
+            closeTodoProjectMenus(true);
         }
     });
 
     document.addEventListener('click', (event) => {
         if (!event.target.closest('.board-column-menu')) {
             closeTodoListMenus();
+        }
+
+        if (!event.target.closest('.project-actions')) {
+            closeTodoProjectMenus();
         }
 
         if (event.target.classList?.contains('todo-modal-overlay')) {

@@ -50,6 +50,7 @@ Route::middleware(['auth', 'sso.token.active'])->group(function () {
     Route::delete('/todos/lists/{todoList}', [TodoController::class, 'deleteList'])->name('todos.lists.destroy');
     Route::post('/todos/workspaces', [TodoController::class, 'storeWorkspace'])->name('todos.workspaces.store');
     Route::post('/todos/projects', [TodoController::class, 'storeProject'])->name('todos.projects.store');
+    Route::put('/todos/projects/{project}', [TodoController::class, 'updateProject'])->name('todos.projects.update');
     Route::delete('/todos/projects/{project}', [TodoController::class, 'deleteProject'])->name('todos.projects.destroy');
     Route::post('/todos', [TodoController::class, 'store'])->name('todos.store');
     Route::put('/todos/cards/reorder', [TodoController::class, 'reorderCards'])->name('todos.cards.reorder');

@@ -29,7 +29,7 @@ class TodoController extends Controller
                     'todos as pending_count' => function ($todoQuery) {
                         $todoQuery->where('status', '!=', 'done');
                     },
-                ])->orderBy('name');
+                ])->withCount('todos')->orderBy('name');
             }])
             ->orderByDesc('is_default')
             ->orderBy('name')
@@ -201,6 +201,21 @@ class TodoController extends Controller
         ]);
     }
 
+    public function updateProject(Request $request, TodoProject $project): JsonResponse
+    {
+        abort_unless($project->user_id === $request->user()->user_id, 403);
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:100'],
+            'color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+        ]);
+
+        $validated['color'] ??= $project->color;
+        $project->update($validated);
+
+        return response()->json(['success' => true, 'project' => $project->fresh()]);
+    }
+
     public function storeWorkspace(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -218,7 +233,7 @@ class TodoController extends Controller
     public function deleteProject(Request $request, TodoProject $project): JsonResponse
     {
         abort_unless($project->user_id === $request->user()->user_id, 403);
-        abort_if($project->todos()->exists(), 422, 'Move or delete this project’s cards before deleting the project.');
+        abort_if($project->todos()->exists(), 422, "Delete this project's cards before deleting the project.");
         $project->delete();
 
         return response()->json(['success' => true]);
