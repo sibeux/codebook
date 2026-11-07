@@ -4,9 +4,8 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -16,11 +15,15 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $table = 'users';
+
     protected $primaryKey = 'user_id';
+
     public $incrementing = true;
+
     protected $keyType = 'int';
 
     const CREATED_AT = 'created_at';
+
     const UPDATED_AT = null;
 
     protected $fillable = [
@@ -42,6 +45,11 @@ class User extends Authenticatable
     public function notes()
     {
         return $this->hasMany(Note::class, 'user_id', 'user_id');
+    }
+
+    public function todoWorkspaces(): HasMany
+    {
+        return $this->hasMany(TodoWorkspace::class, 'user_id', 'user_id');
     }
 
     public function getRememberToken()

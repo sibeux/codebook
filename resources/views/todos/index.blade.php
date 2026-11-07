@@ -155,7 +155,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     overflow: hidden;
 }
 
-/* Pane 1: Projects */
+/* Pane 1: Workspaces and projects */
 .pane-projects {
     width: 240px;
     min-width: 200px;
@@ -338,6 +338,20 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     overflow-y: auto;
     padding: 8px 6px;
 }
+
+.workspace-group { margin: 4px 0 8px; }
+.workspace-group-header { display: flex; align-items: center; gap: 4px; }
+.workspace-link { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding: 8px 9px; border: 1px solid transparent; border-radius: 7px; color: var(--text-secondary); font-size: 12px; font-weight: 650; text-decoration: none; }
+.workspace-link:hover, .workspace-link.active { color: var(--text); background: var(--panel-hover); }
+.workspace-link.active { border-color: var(--border); background: var(--panel); }
+.workspace-toggle { width: 30px; height: 30px; border: 0; border-radius: 6px; color: var(--muted); background: transparent; cursor: pointer; transition: transform var(--todo-transition), background var(--todo-transition); }
+.workspace-toggle:hover { color: var(--text); background: var(--panel-hover); }
+.workspace-toggle[aria-expanded="true"] { transform: rotate(90deg); }
+.workspace-projects { padding: 2px 0 5px 12px; margin-left: 13px; border-left: 1px solid var(--border); }
+.workspace-projects[hidden] { display: none; }
+.workspace-projects .project-link { padding-block: 6px; font-size: 11.5px; }
+.workspace-create-project { width: 100%; margin-top: 3px; padding: 6px 9px; border: 0; border-radius: 6px; color: var(--muted); background: transparent; font: inherit; font-size: 11px; text-align: left; cursor: pointer; }
+.workspace-create-project:hover { color: var(--text); background: var(--panel-hover); }
 
 .project-section-label {
     font-size: 10px;
@@ -1290,9 +1304,9 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     body:has(.todo-shell) { overflow: auto; }
     .pane-projects { width: 100%; min-width: 0; border-right: none; border-bottom: 1px solid var(--border); }
     .pane-projects > .pane-header { height: 42px; }
-    .project-list-scroll { display: flex; flex: 0 0 auto; flex-direction: row; overflow-x: auto; overflow-y: hidden; padding: 6px 8px; gap: 4px; max-height: 48px; }
-    .project-section-label { display: none; }
-    .project-link { white-space: nowrap; flex-shrink: 0; }
+    .project-list-scroll { display: block; flex: 0 0 auto; overflow-x: hidden; overflow-y: auto; padding: 6px 8px; max-height: 180px; }
+    .workspace-group { margin: 2px 0 5px; }
+    .workspace-projects { padding-left: 8px; }
     .pane-list { flex: 0 0 390px; width: 100%; border-right: none; }
     .board-header { height: 48px; padding-inline: 14px; }
     .board-scroll { padding: 12px 14px 16px; }
@@ -1325,7 +1339,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 {{-- ===== HEADER ===== --}}
 <header>
     <div class="brand">
-        <a href="{{ $detailOnly ? route('todos.index', request()->only(['project_id', 'status'])) : route('workspace') }}" style="color:var(--muted);text-decoration:none;font-size:12px;display:inline-flex;align-items:center;gap:4px;padding-right:12px;border-right:1px solid var(--border);">
+        <a href="{{ $detailOnly ? route('todos.index', request()->only(['workspace_id', 'project_id', 'status'])) : route('workspace') }}" style="color:var(--muted);text-decoration:none;font-size:12px;display:inline-flex;align-items:center;gap:4px;padding-right:12px;border-right:1px solid var(--border);">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             {{ $detailOnly ? 'Board' : 'Notes' }}
         </a>
@@ -1353,36 +1367,43 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 </header>
 
 {{-- ===== 3-COLUMN SHELL ===== --}}
-<div class="todo-shell {{ $detailOnly ? 'todo-detail-shell' : '' }} {{ $activeTodo ? 'card-modal-open' : '' }}" data-active-todo-id="{{ $activeTodo?->id ?? '' }}" data-project-id="{{ $currentProjectId ?? '' }}">
+<div class="todo-shell {{ $detailOnly ? 'todo-detail-shell' : '' }} {{ $activeTodo ? 'card-modal-open' : '' }}" data-active-todo-id="{{ $activeTodo?->id ?? '' }}" data-project-id="{{ $currentProjectId ?? '' }}" data-workspace-id="{{ $currentWorkspaceId ?? '' }}">
 
     @if(!$detailOnly)
-    {{-- ===== PANE 1: PROJECTS ===== --}}
+    {{-- ===== PANE 1: WORKSPACES AND PROJECTS ===== --}}
     <aside class="pane-projects">
         <div class="pane-header">
             <span class="pane-header-title">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                Projects
+                Workspaces
             </span>
-            <button class="pane-add-btn" onclick="openNewProjectModal()" title="New Project">+</button>
+            <button class="pane-add-btn" onclick="openNewWorkspaceModal()" title="New workspace">+</button>
         </div>
 
         <div class="project-list-scroll">
-            <div class="project-section-label">My Projects</div>
-
-            @forelse($projects as $p)
-                <a href="{{ route('todos.index', ['project_id' => $p->id, 'status' => request('status')]) }}" onclick="return navigateTodo(event, this)" class="project-link {{ $currentProject?->id === $p->id ? 'active' : '' }}">
-                    <span class="project-link-left">
-                        <span class="project-dot" style="background:{{ $p->color }};"></span>
-                        <span class="project-link-name">{{ $p->name }}</span>
-                    </span>
-                    <span class="project-count-badge project-pending-count" data-project-id="{{ $p->id }}" data-pending-count="{{ $p->pending_count }}" style="{{ $p->pending_count > 0 ? '' : 'display:none;' }}">{{ $p->pending_count }}</span>
-                </a>
-            @empty
-                <div style="font-size:12px;color:var(--muted);padding:10px 10px;line-height:1.6;">
-                    No projects yet.<br>
-                    <span style="opacity:.7">Click <strong>+</strong> to create one.</span>
+            @foreach($workspaces as $workspace)
+                <div class="workspace-group">
+                    <div class="workspace-group-header">
+                        <a href="{{ route('todos.index', ['workspace_id' => $workspace->id]) }}" onclick="return navigateTodo(event, this)" class="workspace-link {{ $currentWorkspaceId === $workspace->id ? 'active' : '' }}">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+                            <span class="project-link-name">{{ $workspace->name }}</span>
+                        </a>
+                        <button class="workspace-toggle" type="button" aria-label="Show projects in {{ $workspace->name }}" aria-expanded="{{ $currentWorkspaceId === $workspace->id ? 'true' : 'false' }}" onclick="toggleWorkspaceProjects(this, {{ $workspace->id }})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
+                    </div>
+                    <div class="workspace-projects" id="workspace-projects-{{ $workspace->id }}" {{ $currentWorkspaceId === $workspace->id ? '' : 'hidden' }}>
+                        @foreach($workspace->projects as $p)
+                            <a href="{{ route('todos.index', ['workspace_id' => $workspace->id, 'project_id' => $p->id, 'status' => request('status')]) }}" onclick="return navigateTodo(event, this)" class="project-link {{ $currentProject?->id === $p->id ? 'active' : '' }}">
+                                <span class="project-link-left">
+                                    <span class="project-dot" style="background:{{ $p->color }};"></span>
+                                    <span class="project-link-name">{{ $p->name }}</span>
+                                </span>
+                                <span class="project-count-badge project-pending-count" data-project-id="{{ $p->id }}" data-pending-count="{{ $p->pending_count }}" style="{{ $p->pending_count > 0 ? '' : 'display:none;' }}">{{ $p->pending_count }}</span>
+                            </a>
+                        @endforeach
+                        <button class="workspace-create-project" type="button" onclick="openNewProjectModal({{ $workspace->id }})">+ New project</button>
+                    </div>
                 </div>
-            @endforelse
+            @endforeach
         </div>
 
     </aside>
@@ -1404,32 +1425,6 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         </div>
 
         <div class="board-scroll" id="task-list-container">
-            @php $unassignedTodos = $todos->whereNull('todo_list_id'); @endphp
-            @if($unassignedTodos->isNotEmpty())
-                <section class="board-column" data-list-id="" aria-label="Unassigned tasks" ondragover="allowTodoDrop(event)" ondragleave="leaveTodoDrop(event)" ondrop="dropTodoCard(event, null)">
-                    <header class="board-column-header">
-                        <span class="board-column-dot" style="background:#94a3b8;"></span>
-                        <span class="board-column-title">Unassigned</span>
-                        <span class="board-column-count">{{ $unassignedTodos->count() }}</span>
-                    </header>
-                    <div class="board-column-cards">
-                        @foreach($unassignedTodos as $t)
-                            <article class="task-card board-task-card {{ $t->status === 'done' ? 'done' : '' }} {{ $activeTodo?->id === $t->id ? 'active' : '' }}" id="task-card-{{ $t->id }}" data-project-id="{{ $t->todo_project_id }}" data-todo-id="{{ $t->id }}" data-list-id="" data-status="{{ $t->status }}" data-persisted-list-id="" data-persisted-status="{{ $t->status }}" draggable="true" ondragstart="startTodoDrag(event, {{ $t->id }})" ondragend="endTodoDrag(event)">
-                                <div class="task-checkbox-wrap">
-                                    <input type="checkbox" class="task-checkbox" aria-label="Mark {{ $t->title }} done" {{ $t->status === 'done' ? 'checked' : '' }} onclick="event.stopPropagation(); toggleTaskDone({{ $t->id }}, this.checked)">
-                                </div>
-                                <div class="task-card-body">
-                                    <a class="task-card-link" href="{{ route('todos.index', array_merge(request()->query(), ['active' => $t->id])) }}">
-                                        <div class="task-title-text"><span class="task-title-label">{{ $t->title }}</span></div>
-                                        <div class="task-card-meta"><span class="badge badge-{{ $t->priority }}">{{ $t->priority }}</span></div>
-                                    </a>
-                                </div>
-                            </article>
-                        @endforeach
-                    </div>
-                </section>
-            @endif
-
             @foreach($todoLists as $column)
                 @php $columnTodos = $todos->where('todo_list_id', $column->id); @endphp
                 <section class="board-column" data-list-id="{{ $column->id }}" data-status="{{ $column->system_status ?? '' }}" ondragover="allowTodoDrop(event)" ondragleave="leaveTodoDrop(event)" ondrop="dropTodoCard(event, {{ $column->id }})" aria-label="{{ $column->name }} list">
@@ -1439,6 +1434,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                         <input class="board-column-title-input" id="todo-list-title-input-{{ $column->id }}" type="text" maxlength="80" value="{{ $column->name }}" aria-label="New list name" style="display:none;" onblur="saveTodoListName({{ $column->id }})" onkeydown="handleTodoListNameKeydown(event)">
                         <span class="board-column-count">{{ $columnTodos->count() }}</span>
                         <button class="board-column-add" type="button" onclick="openNewTaskModal({{ $column->id }})" aria-label="Add card to {{ $column->name }}">+</button>
+                        @if(!$column->system_status)
                         <div class="board-column-menu">
                             <button class="board-list-menu-toggle" type="button" aria-label="More options for {{ $column->name }} list" aria-haspopup="menu" aria-expanded="false" onclick="toggleTodoListMenu(event, this)">
                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="12" cy="19" r="1.8"></circle></svg>
@@ -1447,6 +1443,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                                 <button class="board-list-menu-item" type="button" role="menuitem" onclick="deleteTodoList({{ $column->id }})">Delete list</button>
                             </div>
                         </div>
+                        @endif
                     </header>
                     <div class="board-column-cards">
                         @forelse($columnTodos as $t)
@@ -1486,12 +1483,16 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                 <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A2.5 2.5 0 0 1 5.5 5h4l2 2h7A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"/><path d="M3 10h18"/></svg>
             </div>
             @if($projects->isNotEmpty())
-                <h2 id="project-picker-title">Pilih proyek untuk mulai</h2>
-                <p>Pilih salah satu proyek di daftar untuk melihat tugas dan papan kerjanya.</p>
+                <h2 id="project-picker-title">{{ $currentWorkspace->name }}</h2>
+                <p>Pilih proyek di workspace ini untuk melihat daftar dan kartu.</p>
+                <button type="button" class="primary-btn" onclick="openNewProjectModal({{ $currentWorkspaceId }})" style="margin-top:20px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    Buat proyek
+                </button>
             @else
-                <h2 id="project-picker-title">Mulai dengan proyek pertama</h2>
-                <p>Buat proyek untuk mengatur tugas dan aktivitasmu.</p>
-                <button type="button" class="primary-btn" onclick="openNewProjectModal()" style="margin-top:20px;">
+                <h2 id="project-picker-title">Mulai di {{ $currentWorkspace->name }}</h2>
+                <p>Buat proyek untuk mengatur daftar dan kartu di workspace ini.</p>
+                <button type="button" class="primary-btn" onclick="openNewProjectModal({{ $currentWorkspaceId }})" style="margin-top:20px;">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
                     Buat proyek
                 </button>
@@ -1533,7 +1534,6 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                                             </span>
                                         @endif
                                         <select class="ws-status-select" aria-label="Move card to list" onchange="updateTaskList({{ $activeTodo->id }}, this.value)">
-                                            <option value="" {{ $activeTodo->todo_list_id === null ? 'selected' : '' }}>Unassigned</option>
                                             @foreach($todoLists as $todoList)
                                                 <option value="{{ $todoList->id }}" {{ $activeTodo->todo_list_id === $todoList->id ? 'selected' : '' }}>{{ $todoList->name }}</option>
                                             @endforeach
@@ -1672,10 +1672,26 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
 {{-- ===== MODALS ===== --}}
 
+{{-- New Workspace Modal --}}
+<div id="modal-workspace" class="todo-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="workspace-modal-title">
+    <div class="todo-modal" style="max-width:340px;">
+        <h3 class="todo-modal-title" id="workspace-modal-title">New Workspace</h3>
+        <div class="form-group">
+            <label class="form-label" for="workspace-name-input">Workspace name</label>
+            <input type="text" id="workspace-name-input" class="form-input" maxlength="100" placeholder="e.g. Product, Personal">
+        </div>
+        <div class="modal-footer">
+            <button class="icon-btn" onclick="closeModals()">Cancel</button>
+            <button class="primary-btn" onclick="submitNewWorkspace()">Create workspace</button>
+        </div>
+    </div>
+</div>
+
 {{-- New Project Modal --}}
 <div id="modal-project" class="todo-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="project-modal-title">
     <div class="todo-modal" style="max-width:340px;">
         <h3 class="todo-modal-title" id="project-modal-title">New Project</h3>
+        <input type="hidden" id="project-workspace-id" value="{{ $currentWorkspaceId }}">
         <div class="form-group">
             <label class="form-label">Project Name</label>
             <input type="text" id="project-name-input" class="form-input" placeholder="e.g. Codebook, API Client">
@@ -1733,22 +1749,12 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         <div class="form-group">
             <label class="form-label" for="task-list-select">List</label>
             <select id="task-list-select" class="form-select">
-                <option value="">Unassigned</option>
                 @foreach($todoLists as $todoList)
                     <option value="{{ $todoList->id }}">{{ $todoList->name }}</option>
                 @endforeach
             </select>
         </div>
         <div class="modal-row">
-            <div class="form-group">
-                <label class="form-label">Project</label>
-                <select id="task-project-select" class="form-select">
-                    <option value="">No Project</option>
-                    @foreach($projects as $p)
-                        <option value="{{ $p->id }}" {{ request('project_id') == $p->id ? 'selected' : '' }}>{{ $p->name }}</option>
-                    @endforeach
-                </select>
-            </div>
             <div class="form-group">
                 <label class="form-label">Priority</label>
                 <select id="task-priority-select" class="form-select">
@@ -1789,6 +1795,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     let activeTodoId = {{ $activeTodo ? $activeTodo->id : 'null' }};
     let currentProjectId = @json($currentProjectId ? (int) $currentProjectId : null);
+    let currentWorkspaceId = @json((int) $currentWorkspaceId);
     const currentTodoStatusFilter = @json(request()->filled('status') ? request('status') : null);
     const todoSystemListIds = @json($todoLists->whereNotNull('system_status')->pluck('id', 'system_status'));
     const todoIndexPath = new URL("{{ route('todos.index') }}", window.location.origin).pathname;
@@ -2024,7 +2031,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             currentShell.replaceWith(nextShell);
             todoWorkspaceSnapshot = null;
 
-            ['modal-project', 'modal-list', 'modal-task', 'modal-command', 'todo-toast'].forEach((id) => {
+            ['modal-workspace', 'modal-project', 'modal-list', 'modal-task', 'modal-command', 'todo-toast'].forEach((id) => {
                 const currentElement = document.getElementById(id);
                 const nextElement = nextDocument.getElementById(id);
 
@@ -2035,6 +2042,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
             activeTodoId = Number(nextShell.dataset.activeTodoId) || null;
             currentProjectId = Number(nextShell.dataset.projectId) || null;
+            currentWorkspaceId = Number(nextShell.dataset.workspaceId) || null;
 
             if (pushState) {
                 window.history.pushState({}, '', url);
@@ -2093,15 +2101,29 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     }
 
     function closeModals() {
+        document.getElementById('modal-workspace').style.display = 'none';
         document.getElementById('modal-project').style.display = 'none';
         document.getElementById('modal-list').style.display = 'none';
         document.getElementById('modal-task').style.display = 'none';
         document.getElementById('modal-command').style.display = 'none';
     }
 
-    function openNewProjectModal() {
+    function openNewWorkspaceModal() {
+        document.getElementById('modal-workspace').style.display = 'flex';
+        document.getElementById('workspace-name-input').focus();
+    }
+
+    function openNewProjectModal(workspaceId = currentWorkspaceId) {
+        document.getElementById('project-workspace-id').value = String(workspaceId ?? '');
         document.getElementById('modal-project').style.display = 'flex';
         document.getElementById('project-name-input').focus();
+    }
+
+    function toggleWorkspaceProjects(button, workspaceId) {
+        const projects = document.getElementById(`workspace-projects-${workspaceId}`);
+        const expanded = button.getAttribute('aria-expanded') === 'true';
+        button.setAttribute('aria-expanded', String(!expanded));
+        projects.hidden = expanded;
     }
 
     function openNewListModal() {
@@ -2129,18 +2151,42 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     async function submitNewProject() {
         const name = document.getElementById('project-name-input').value.trim();
         const color = document.getElementById('project-color-input').value;
+        const workspace_id = Number(document.getElementById('project-workspace-id').value) || currentWorkspaceId;
         if (!name) {
             showToast('Nama project wajib diisi.');
             return;
         }
 
         try {
-            await todoRequest("{{ route('todos.projects.store') }}", {
+            const response = await todoRequest("{{ route('todos.projects.store') }}", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                body: JSON.stringify({ name, color })
+                body: JSON.stringify({ name, color, workspace_id })
             });
-            await refreshTodoShell();
+            const payload = await response.json();
+            await refreshTodoShell(`{{ route('todos.index') }}?workspace_id=${workspace_id}&project_id=${payload.project.id}`, { pushState: true });
+        } catch (error) {
+            showToast(error.message);
+        }
+    }
+
+    async function submitNewWorkspace() {
+        const name = document.getElementById('workspace-name-input').value.trim();
+
+        if (!name) {
+            showToast('Nama workspace wajib diisi.');
+            document.getElementById('workspace-name-input').focus();
+            return;
+        }
+
+        try {
+            const response = await todoRequest("{{ route('todos.workspaces.store') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify({ name })
+            });
+            const payload = await response.json();
+            await refreshTodoShell(`{{ route('todos.index') }}?workspace_id=${payload.workspace.id}`, { pushState: true });
         } catch (error) {
             showToast(error.message);
         }
@@ -2160,7 +2206,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             await todoRequest("{{ route('todos.lists.store') }}", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                body: JSON.stringify({ name, color })
+                body: JSON.stringify({ name, color, todo_project_id: currentProjectId })
             });
             await refreshTodoShell();
         } catch (error) {
@@ -2256,7 +2302,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     async function deleteTodoList(todoListId) {
         closeTodoListMenus();
 
-        if (!confirm('Delete this list? Tasks will remain unassigned.')) {
+        if (!confirm('Delete this list? Cards will return to their status lists.')) {
             return;
         }
 
@@ -2274,7 +2320,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     async function submitNewTask() {
         const title = document.getElementById('task-title-input').value.trim();
         const description = document.getElementById('task-desc-input').value.trim();
-        const todo_project_id = currentProjectId ?? (document.getElementById('task-project-select').value || null);
+        const todo_project_id = currentProjectId;
         const priority = document.getElementById('task-priority-select').value;
         const selectedListId = document.getElementById('task-list-select').value;
         const todo_list_id = selectedListId ? Number(selectedListId) : null;
@@ -2297,7 +2343,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                 body: JSON.stringify({ title, description, todo_project_id, priority, todo_list_id })
             });
             const data = await res.json();
-            await refreshTodoShell("{{ route('todos.index', request()->only(['project_id', 'status'])) }}", { pushState: true });
+            await refreshTodoShell("{{ route('todos.index', request()->only(['workspace_id', 'project_id', 'status'])) }}", { pushState: true });
         } catch (error) {
             showToast(error.message);
         }
@@ -2738,7 +2784,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                 method: 'DELETE',
                 headers: { 'X-CSRF-TOKEN': csrfToken }
             });
-            window.location.assign("{{ route('todos.index', request()->only(['project_id', 'status'])) }}");
+            window.location.assign("{{ route('todos.index', request()->only(['workspace_id', 'project_id', 'status'])) }}");
         } catch (error) {
             showToast(error.message);
         }

@@ -22,23 +22,26 @@ class TodoList extends Model
 
     protected $fillable = [
         'user_id',
+        'todo_project_id',
         'name',
         'system_status',
         'color',
         'position',
     ];
 
-    public static function ensureSystemLists(User $user): void
+    public static function ensureSystemLists(User $user, TodoProject $project): void
     {
         foreach (self::SYSTEM_LISTS as $status => $attributes) {
             $listExists = self::withTrashed()
                 ->where('user_id', $user->user_id)
+                ->where('todo_project_id', $project->id)
                 ->where('system_status', $status)
                 ->exists();
 
             if (! $listExists) {
                 self::create([
                     'user_id' => $user->user_id,
+                    'todo_project_id' => $project->id,
                     'system_status' => $status,
                     ...$attributes,
                 ]);
@@ -54,5 +57,10 @@ class TodoList extends Model
     public function todos(): HasMany
     {
         return $this->hasMany(Todo::class);
+    }
+
+    public function project(): BelongsTo
+    {
+        return $this->belongsTo(TodoProject::class, 'todo_project_id');
     }
 }
