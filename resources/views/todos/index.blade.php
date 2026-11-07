@@ -1296,6 +1296,17 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 .todo-skeleton-copy.short { width: 54%; }
 .todo-skeleton-section { height: 112px; margin-top: 4px; border: 1px solid var(--border); background: var(--panel); }
 
+.todo-board-skeleton { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; background: var(--bg); }
+.todo-board-skeleton-header { display: flex; flex: 0 0 52px; align-items: center; justify-content: space-between; padding: 0 20px; border-bottom: 1px solid var(--border); }
+.todo-board-skeleton-title { width: 190px; height: 14px; }
+.todo-board-skeleton-action { width: 92px; height: 30px; border-radius: 6px; }
+.todo-board-skeleton-columns { display: flex; flex: 1; min-height: 0; gap: 14px; overflow-x: auto; overflow-y: hidden; padding: 18px 20px 24px; }
+.todo-board-skeleton-column { display: flex; flex: 0 0 248px; flex-direction: column; gap: 12px; min-height: 0; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: color-mix(in srgb, var(--panel) 78%, var(--bg)); }
+.todo-board-skeleton-list-title { width: 58%; height: 14px; margin: 2px 0 3px; }
+.todo-board-skeleton-card { height: 76px; flex: 0 0 auto; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); }
+.todo-board-skeleton-card.short { height: 60px; }
+.todo-board-skeleton-card.tall { height: 92px; }
+
 @keyframes todo-skeleton-shimmer {
     100% { transform: translateX(100%); }
 }
@@ -1310,6 +1321,12 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     .pane-workspace { width: 320px; min-width: 290px; }
     .board-scroll { padding-inline: 14px; gap: 10px; }
     .board-column { width: 230px; min-width: 230px; }
+}
+
+@media (max-width: 860px) {
+    .todo-board-skeleton-header { flex-basis: 48px; padding-inline: 14px; }
+    .todo-board-skeleton-columns { gap: 10px; padding: 12px 14px 16px; overflow-x: auto; }
+    .todo-board-skeleton-column { flex-basis: min(82vw, 300px); }
 }
 
 @media (max-width: 860px) {
@@ -1831,6 +1848,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     let todoLoadingProgress = 0;
     let todoShellRefreshId = 0;
     let todoWorkspaceSnapshot = null;
+    let todoBoardSnapshot = null;
     let todoModalFocusAfterCloseId = null;
 
     function setTodoLoading(isLoading) {
@@ -2006,15 +2024,60 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         }
     }
 
+    function createTodoBoardSkeleton() {
+        const columns = Array.from({ length: 4 }, (_, columnIndex) => {
+            const cards = Array.from({ length: columnIndex === 1 ? 3 : 2 }, (_, cardIndex) => {
+                const size = cardIndex === 0 ? ' tall' : cardIndex === 1 ? ' short' : '';
+
+                return `<div class="todo-skeleton-block todo-board-skeleton-card${size}"></div>`;
+            }).join('');
+
+            return `
+                <section class="todo-board-skeleton-column" aria-hidden="true">
+                    <div class="todo-skeleton-block todo-board-skeleton-list-title"></div>
+                    ${cards}
+                </section>`;
+        }).join('');
+
+        return `
+            <div class="todo-board-skeleton" role="status" aria-label="Loading project">
+                <div class="todo-board-skeleton-header" aria-hidden="true">
+                    <div class="todo-skeleton-block todo-board-skeleton-title"></div>
+                    <div class="todo-skeleton-block todo-board-skeleton-action"></div>
+                </div>
+                <div class="todo-board-skeleton-columns" aria-hidden="true">${columns}</div>
+            </div>`;
+    }
+
     async function refreshTodoShell(url = window.location.href, { pushState = false, replaceState = false } = {}) {
         const refreshId = ++todoShellRefreshId;
         const requestedUrl = new URL(url, window.location.href);
         const shouldShowCardModal = requestedUrl.pathname === todoIndexPath && requestedUrl.searchParams.has('active');
+        const requestedProjectId = Number(requestedUrl.searchParams.get('project_id')) || null;
         const shell = document.querySelector('.todo-shell');
         const workspace = document.getElementById('task-workspace-container');
+        const boardPane = shell?.querySelector('.pane-list');
         const backdrop = document.getElementById('task-modal-backdrop');
         const openingCardModal = shouldShowCardModal && !shell?.classList.contains('card-modal-open');
         const closingCardModal = !shouldShowCardModal && shell?.classList.contains('card-modal-open');
+        const openingProject = requestedUrl.pathname === todoIndexPath
+            && requestedProjectId !== null
+            && requestedProjectId !== currentProjectId;
+
+        if (openingProject && boardPane) {
+            if (!todoBoardSnapshot) {
+                todoBoardSnapshot = {
+                    pane: boardPane,
+                    markup: boardPane.innerHTML,
+                    className: boardPane.className,
+                    ariaBusy: boardPane.getAttribute('aria-busy'),
+                };
+            }
+
+            boardPane.classList.remove('project-picker');
+            boardPane.setAttribute('aria-busy', 'true');
+            boardPane.innerHTML = createTodoBoardSkeleton();
+        }
 
         if (closingCardModal && !todoModalFocusAfterCloseId) {
             todoModalFocusAfterCloseId = activeTodoId;
@@ -2054,6 +2117,14 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             }
         }
 
+        if (openingProject) {
+            await waitForTodoLoadingPaint();
+
+            if (refreshId !== todoShellRefreshId) {
+                return;
+            }
+        }
+
         try {
             const response = await todoFetch(url, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' },
@@ -2079,6 +2150,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
             currentShell.replaceWith(nextShell);
             todoWorkspaceSnapshot = null;
+            todoBoardSnapshot = null;
 
             ['modal-workspace', 'modal-project', 'modal-list', 'modal-task', 'modal-command', 'todo-toast'].forEach((id) => {
                 const currentElement = document.getElementById(id);
@@ -2109,6 +2181,19 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                 todoModalFocusAfterCloseId = null;
             }
         } catch (error) {
+            if (refreshId === todoShellRefreshId && todoBoardSnapshot?.pane.isConnected) {
+                todoBoardSnapshot.pane.innerHTML = todoBoardSnapshot.markup;
+                todoBoardSnapshot.pane.className = todoBoardSnapshot.className;
+
+                if (todoBoardSnapshot.ariaBusy === null) {
+                    todoBoardSnapshot.pane.removeAttribute('aria-busy');
+                } else {
+                    todoBoardSnapshot.pane.setAttribute('aria-busy', todoBoardSnapshot.ariaBusy);
+                }
+
+                todoBoardSnapshot = null;
+            }
+
             if (refreshId === todoShellRefreshId && workspace?.isConnected) {
                 workspace.innerHTML = todoWorkspaceSnapshot?.markup ?? '';
                 workspace.className = todoWorkspaceSnapshot?.className ?? 'pane-workspace is-empty';
