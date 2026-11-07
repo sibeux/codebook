@@ -1901,6 +1901,32 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         }
     }
 
+    let todoSessionReloading = false;
+    const todoLoginPath = new URL("{{ route('login') }}", window.location.origin).pathname;
+
+    function handleExpiredTodoSession(response) {
+        const responsePath = response.url ? new URL(response.url, window.location.href).pathname : '';
+        const wasRedirectedToLogin = response.redirected && responsePath === todoLoginPath;
+
+        if (![401, 419].includes(response.status) && !wasRedirectedToLogin) {
+            return;
+        }
+
+        if (!todoSessionReloading) {
+            todoSessionReloading = true;
+            window.location.reload();
+        }
+
+        throw new Error('Sesi login berakhir. Halaman sedang dimuat ulang.');
+    }
+
+    async function todoFetch(url, options) {
+        const response = await fetch(url, options);
+        handleExpiredTodoSession(response);
+
+        return response;
+    }
+
     async function todoRequest(url, options, { showProgress = true } = {}) {
         if (showProgress) {
             setTodoLoading(true);
@@ -1908,7 +1934,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         }
 
         try {
-            const response = await fetch(url, options);
+            const response = await todoFetch(url, options);
 
             if (response.ok) {
                 return response;
@@ -1973,7 +1999,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         }
 
         try {
-            const response = await fetch(url, {
+            const response = await todoFetch(url, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' },
             });
 
@@ -2202,7 +2228,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         title.textContent = nextName;
 
         try {
-            const response = await fetch(`/todos/lists/${todoListId}`, {
+            const response = await todoFetch(`/todos/lists/${todoListId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                 body: JSON.stringify({ name: nextName })
@@ -2547,7 +2573,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         const todoId = Number(card.dataset.todoId);
         const previousSave = card.todoSaveQueue || Promise.resolve();
         const currentSave = previousSave.catch(() => {}).then(async () => {
-            const response = await fetch(`/todos/${todoId}`, {
+            const response = await todoFetch(`/todos/${todoId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
                 body: JSON.stringify(changes)
