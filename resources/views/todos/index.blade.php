@@ -2682,7 +2682,21 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                 body: JSON.stringify({ title, description, todo_project_id, priority, todo_list_id })
             });
             const data = await res.json();
-            await refreshTodoShell("{{ route('todos.index', request()->only(['workspace_id', 'project_id', 'status'])) }}", { pushState: true });
+            closeModals();
+            document.getElementById('task-title-input').value = '';
+            document.getElementById('task-desc-input').value = '';
+
+            const targetProjectId = todo_project_id || data?.todo?.todo_project_id || currentProjectId;
+            const targetUrl = new URL(window.location.href);
+            if (targetProjectId) {
+                targetUrl.searchParams.set('project_id', String(targetProjectId));
+            }
+            if (currentWorkspaceId) {
+                targetUrl.searchParams.set('workspace_id', String(currentWorkspaceId));
+            }
+            targetUrl.searchParams.delete('active');
+
+            await refreshTodoShell(targetUrl.href, { replaceState: true });
         } catch (error) {
             showToast(error.message);
         }
@@ -3154,7 +3168,15 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                 method: 'DELETE',
                 headers: { 'X-CSRF-TOKEN': csrfToken }
             });
-            window.location.assign("{{ route('todos.index', request()->only(['workspace_id', 'project_id', 'status'])) }}");
+            const targetUrl = new URL(window.location.href);
+            if (currentProjectId) {
+                targetUrl.searchParams.set('project_id', String(currentProjectId));
+            }
+            if (currentWorkspaceId) {
+                targetUrl.searchParams.set('workspace_id', String(currentWorkspaceId));
+            }
+            targetUrl.searchParams.delete('active');
+            window.location.assign(targetUrl.href);
         } catch (error) {
             showToast(error.message);
         }

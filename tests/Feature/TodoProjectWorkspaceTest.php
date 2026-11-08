@@ -177,4 +177,50 @@ class TodoProjectWorkspaceTest extends TestCase
         $response->assertSee('id="project-workspace-id"', false);
         $response->assertSee('Move to workspace', false);
     }
+
+    public function test_creating_task_in_project_retains_project_view(): void
+    {
+        $user = $this->makeUser();
+
+        $workspace = TodoWorkspace::create([
+            'user_id' => $user->user_id,
+            'name' => 'Personal',
+            'is_default' => true,
+        ]);
+
+        $project = TodoProject::create([
+            'user_id' => $user->user_id,
+            'workspace_id' => $workspace->id,
+            'name' => 'Feature Development',
+            'color' => '#10b981',
+        ]);
+
+        TodoList::ensureSystemLists($user, $project);
+        $todoList = TodoList::where('todo_project_id', $project->id)->firstOrFail();
+
+        $createResponse = $this->actingAs($user)->postJson(route('todos.store'), [
+            'title' => 'Important project task',
+            'todo_project_id' => $project->id,
+            'todo_list_id' => $todoList->id,
+            'priority' => 'high',
+        ]);
+
+        $createResponse->assertOk()->assertJsonPath('success', true);
+        $this->assertDatabaseHas('todos', [
+            'title' => 'Important project task',
+            'todo_project_id' => $project->id,
+            'todo_list_id' => $todoList->id,
+        ]);
+
+        $viewResponse = $this->actingAs($user)->get(route('todos.index', [
+            'workspace_id' => $workspace->id,
+            'project_id' => $project->id,
+        ]));
+
+        $viewResponse->assertOk();
+        $viewResponse->assertSee('Feature Development');
+        $viewResponse->assertSee('Important project task');
+        $viewResponse->assertDontSee('id="project-picker-title"', false);
+        $viewResponse->assertSee("targetUrl.searchParams.set('project_id', String(targetProjectId));", false);
+    }
 }
