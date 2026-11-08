@@ -786,6 +786,31 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     line-height: 1.6;
     margin-top: 6px;
     margin-bottom: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.ws-task-desc.is-empty {
+    color: var(--muted);
+    font-style: italic;
+}
+
+.ws-desc-edit-wrap {
+    display: none;
+    margin-top: 8px;
+}
+
+.ws-desc-edit-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.ws-desc-edit-hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-left: auto;
 }
 
 /* Status Select — modern pill */
@@ -1641,8 +1666,21 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                         <section class="ws-section task-description-section">
                             <div class="ws-section-header">
                                 <span class="ws-section-title">Description</span>
+                                <button type="button" class="ws-edit-title-btn" id="edit-task-desc-btn" onclick="startTaskDescEdit()" aria-label="Edit description" title="Edit description" style="padding:4px 8px;font-size:11px;gap:5px;">
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L8 18l-4 1 1-4Z"/></svg>
+                                    <span>Edit</span>
+                                </button>
                             </div>
-                            <p class="ws-task-desc">{{ $activeTodo->description ?: 'No description provided.' }}</p>
+                            <p class="ws-task-desc {{ empty($activeTodo->description) ? 'is-empty' : '' }}" id="ws-task-desc">{{ $activeTodo->description ?: 'No description provided.' }}</p>
+
+                            <div class="ws-desc-edit-wrap" id="ws-task-desc-editor">
+                                <textarea id="ws-task-desc-input" class="form-textarea" rows="4" placeholder="Add details, context, or acceptance criteria..." aria-label="Task description">{{ $activeTodo->description }}</textarea>
+                                <div class="ws-desc-edit-actions">
+                                    <button type="button" class="primary-btn" onclick="saveTaskDesc()" style="font-size:11.5px;height:28px;padding:0 12px;">Save</button>
+                                    <button type="button" class="icon-btn" onclick="cancelTaskDescEdit()" style="font-size:11.5px;height:28px;">Cancel</button>
+                                    <span class="ws-desc-edit-hint">Ctrl+Enter to save &bull; Esc to cancel</span>
+                                </div>
+                            </div>
                         </section>
 
                         {{-- Quick Commands --}}
@@ -2268,6 +2306,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             }
 
             bindTodoTitleEditor();
+            bindTodoDescEditor();
             formatThreadEntryTimes(nextShell);
 
             if (openingCardModal) {
@@ -3139,7 +3178,122 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         });
     }
 
+    let originalTaskDesc = null;
+
+    function startTaskDescEdit() {
+        const descEl = document.getElementById('ws-task-desc');
+        const editor = document.getElementById('ws-task-desc-editor');
+        const input = document.getElementById('ws-task-desc-input');
+        const editBtn = document.getElementById('edit-task-desc-btn');
+
+        if (!descEl || !editor || !input) {
+            return;
+        }
+
+        originalTaskDesc = input.value;
+        descEl.style.display = 'none';
+        if (editBtn) editBtn.style.display = 'none';
+        editor.style.display = 'block';
+        input.focus();
+    }
+
+    function cancelTaskDescEdit() {
+        const descEl = document.getElementById('ws-task-desc');
+        const editor = document.getElementById('ws-task-desc-editor');
+        const input = document.getElementById('ws-task-desc-input');
+        const editBtn = document.getElementById('edit-task-desc-btn');
+
+        if (!descEl || !editor || !input) {
+            return;
+        }
+
+        if (originalTaskDesc !== null) {
+            input.value = originalTaskDesc;
+        }
+        descEl.style.display = '';
+        if (editBtn) editBtn.style.display = '';
+        editor.style.display = 'none';
+    }
+
+    async function saveTaskDesc() {
+        const input = document.getElementById('ws-task-desc-input');
+        const descEl = document.getElementById('ws-task-desc');
+        const editor = document.getElementById('ws-task-desc-editor');
+        const editBtn = document.getElementById('edit-task-desc-btn');
+
+        if (!input || !descEl || !activeTodoId) {
+            return;
+        }
+
+        const nextDesc = input.value.trim();
+        const todoId = activeTodoId;
+        const previousDesc = originalTaskDesc ?? (descEl.classList.contains('is-empty') ? '' : descEl.textContent);
+
+        originalTaskDesc = nextDesc;
+        input.value = nextDesc;
+        if (nextDesc) {
+            descEl.textContent = nextDesc;
+            descEl.classList.remove('is-empty');
+        } else {
+            descEl.textContent = 'No description provided.';
+            descEl.classList.add('is-empty');
+        }
+        descEl.style.display = '';
+        if (editBtn) editBtn.style.display = '';
+        editor.style.display = 'none';
+
+        try {
+            const response = await todoRequest(`/todos/${todoId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                body: JSON.stringify({ description: nextDesc })
+            }, { showProgress: false });
+            const data = await response.json();
+
+            if (activeTodoId === todoId) {
+                const finalDesc = data.todo.description ? data.todo.description.trim() : '';
+                originalTaskDesc = finalDesc;
+                input.value = finalDesc;
+                if (finalDesc) {
+                    descEl.textContent = finalDesc;
+                    descEl.classList.remove('is-empty');
+                } else {
+                    descEl.textContent = 'No description provided.';
+                    descEl.classList.add('is-empty');
+                }
+            }
+        } catch (error) {
+            if (activeTodoId === todoId) {
+                originalTaskDesc = previousDesc;
+                input.value = previousDesc;
+                if (previousDesc) {
+                    descEl.textContent = previousDesc;
+                    descEl.classList.remove('is-empty');
+                } else {
+                    descEl.textContent = 'No description provided.';
+                    descEl.classList.add('is-empty');
+                }
+            }
+            showToast(error.message);
+        }
+    }
+
+    function bindTodoDescEditor() {
+        document.getElementById('ws-task-desc-input')?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+                event.preventDefault();
+                saveTaskDesc();
+            }
+
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                cancelTaskDescEdit();
+            }
+        });
+    }
+
     bindTodoTitleEditor();
+    bindTodoDescEditor();
     formatThreadEntryTimes();
 
     document.addEventListener('input', (event) => {
@@ -3408,7 +3562,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         }
 
         if (event.key === 'Escape') {
-            if (event.target.id !== 'ws-task-title-input') {
+            if (event.target.id !== 'ws-task-title-input' && event.target.id !== 'ws-task-desc-input') {
                 closeTaskModal();
             }
 

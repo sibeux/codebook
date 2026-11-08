@@ -223,4 +223,77 @@ class TodoProjectWorkspaceTest extends TestCase
         $viewResponse->assertDontSee('id="project-picker-title"', false);
         $viewResponse->assertSee("targetUrl.searchParams.set('project_id', String(targetProjectId));", false);
     }
+
+    public function test_user_can_update_task_description_and_see_editor_in_ui(): void
+    {
+        $user = $this->makeUser();
+
+        $workspace = TodoWorkspace::create([
+            'user_id' => $user->user_id,
+            'name' => 'Personal Workspace',
+            'is_default' => true,
+        ]);
+
+        $project = TodoProject::create([
+            'user_id' => $user->user_id,
+            'workspace_id' => $workspace->id,
+            'name' => 'Web App',
+            'color' => '#6366f1',
+        ]);
+
+        TodoList::ensureSystemLists($user, $project);
+        $todoList = TodoList::where('todo_project_id', $project->id)->firstOrFail();
+
+        $todo = Todo::create([
+            'user_id' => $user->user_id,
+            'todo_project_id' => $project->id,
+            'todo_list_id' => $todoList->id,
+            'title' => 'Sample Task',
+            'description' => 'Initial description content',
+            'status' => 'todo',
+        ]);
+
+        // Verify UI contains description section with edit button and editor elements
+        $viewResponse = $this->actingAs($user)->get(route('todos.index', [
+            'workspace_id' => $workspace->id,
+            'project_id' => $project->id,
+            'active' => $todo->id,
+        ]));
+
+        $viewResponse->assertOk();
+        $viewResponse->assertSee('Initial description content');
+        $viewResponse->assertSee('id="edit-task-desc-btn"', false);
+        $viewResponse->assertSee('id="ws-task-desc-editor"', false);
+        $viewResponse->assertSee('id="ws-task-desc-input"', false);
+        $viewResponse->assertSee('startTaskDescEdit()', false);
+        $viewResponse->assertSee('saveTaskDesc()', false);
+
+        // Update description via PUT API
+        $response = $this->actingAs($user)->putJson(route('todos.update', $todo), [
+            'description' => 'Updated description content with more details.',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('todo.description', 'Updated description content with more details.');
+
+        $this->assertDatabaseHas('todos', [
+            'id' => $todo->id,
+            'description' => 'Updated description content with more details.',
+        ]);
+
+        // Can also clear description (nullable)
+        $clearResponse = $this->actingAs($user)->putJson(route('todos.update', $todo), [
+            'description' => null,
+        ]);
+
+        $clearResponse->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('todo.description', null);
+
+        $this->assertDatabaseHas('todos', [
+            'id' => $todo->id,
+            'description' => null,
+        ]);
+    }
 }
