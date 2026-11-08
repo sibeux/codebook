@@ -3,33 +3,7 @@
 @section('title', $activeNote ? $activeNote->title : 'Workspace')
 
 @section('content')
-<header>
-    <div class="brand">
-        <button type="button" class="icon-btn sidebar-toggle-btn" id="sidebar-toggle-btn" title="Buka / Tutup Sidebar (Ctrl+B)" aria-label="Toggle Sidebar">
-            <svg class="icon-sidebar" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="9" y1="3" x2="9" y2="21"></line>
-            </svg>
-        </button>
-        <h1>Codebook</h1>
-        <span>Markdown Mode</span>
-        <a href="{{ route('todos.index') }}" class="icon-btn" style="text-decoration:none;margin-left:8px;font-size:12px;background:var(--panel-2);color:var(--text);border:1px solid var(--border);" title="Open Tasks & Projects">
-            &#x2714; Tasks
-        </a>
-    </div>
-
-    <div class="header-actions">
-        <div class="user-badge">
-            <span>&#128100; {{ Auth::user()->name }}</span>
-            <span style="font-size:10px;background:var(--panel-2);border:1px solid var(--border);padding:2px 6px;border-radius:12px;text-transform:uppercase;">{{ Auth::user()->role }}</span>
-        </div>
-        <button class="icon-btn" id="theme-btn" title="Ganti Mode Tema"><span>Light mode</span></button>
-        <form action="{{ route('logout') }}" method="POST" style="margin:0;">
-            @csrf
-            <button type="submit" class="icon-btn" title="Keluar dari akun">&#x27A1; Logout</button>
-        </form>
-    </div>
-</header>
+@include('layouts.header', ['showSidebarToggle' => true])
 
 <main>
     <!-- Floating toggle button to reopen sidebar when collapsed -->

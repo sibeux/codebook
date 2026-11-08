@@ -35,7 +35,7 @@ class AuthController extends Controller
 
         $result = $this->ssoService->login($credentials['email'], $credentials['password']);
 
-        if (!$result['success']) {
+        if (! $result['success']) {
             return back()
                 ->withInput($request->only('email'))
                 ->withErrors(['email' => $result['message']]);
@@ -44,7 +44,7 @@ class AuthController extends Controller
         // Find existing user in shared database or create if not present
         $user = User::where('email', $credentials['email'])->first();
 
-        if (!$user) {
+        if (! $user) {
             $user = User::create([
                 'email' => $credentials['email'],
                 'name' => explode('@', $credentials['email'])[0],
@@ -75,4 +75,3 @@ class AuthController extends Controller
         return redirect()->route('login')->with('status', 'Anda telah berhasil logout.');
     }
 }
-

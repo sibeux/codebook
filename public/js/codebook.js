@@ -272,7 +272,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     // Theme toggle
-    if (themeBtn) {
+    if (themeBtn && !themeBtn.dataset.themeBound) {
+        themeBtn.dataset.themeBound = 'true';
         const updateThemeBtn = () => {
             const isLight = document.documentElement.getAttribute('data-theme') === 'light';
             if (isLight) {
@@ -352,43 +353,44 @@ document.addEventListener('DOMContentLoaded', function () {
     // Set initial aria / title
     updateSidebarToggleAria(document.documentElement.classList.contains('sidebar-collapsed'));
 
-    if (sidebarToggleBtn) {
+    if (sidebarToggleBtn && !sidebarToggleBtn.dataset.sidebarBound) {
+        sidebarToggleBtn.dataset.sidebarBound = 'true';
         sidebarToggleBtn.addEventListener('click', function () {
             toggleSidebar();
         });
-    }
 
-    if (sidebarCloseBtn) {
-        sidebarCloseBtn.addEventListener('click', function () {
-            toggleSidebar(true);
-        });
-    }
-
-    if (sidebarFloatingToggle) {
-        sidebarFloatingToggle.addEventListener('click', function () {
-            toggleSidebar(false);
-        });
-    }
-
-    // Keyboard shortcuts: Ctrl+B / Cmd+B (when not typing in inputs/textareas) and Ctrl+\ / Cmd+\
-    document.addEventListener('keydown', function (e) {
-        const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-        if (!isCtrlOrCmd) return;
-
-        if (e.key === '\\') {
-            e.preventDefault();
-            toggleSidebar();
-            return;
+        if (sidebarCloseBtn) {
+            sidebarCloseBtn.addEventListener('click', function () {
+                toggleSidebar(true);
+            });
         }
 
-        if (e.key.toLowerCase() === 'b') {
-            const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
-            if (activeTag !== 'textarea' && activeTag !== 'input') {
+        if (sidebarFloatingToggle) {
+            sidebarFloatingToggle.addEventListener('click', function () {
+                toggleSidebar(false);
+            });
+        }
+
+        // Keyboard shortcuts: Ctrl+B / Cmd+B (when not typing in inputs/textareas) and Ctrl+\ / Cmd+\
+        document.addEventListener('keydown', function (e) {
+            const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+            if (!isCtrlOrCmd) return;
+
+            if (e.key === '\\') {
                 e.preventDefault();
                 toggleSidebar();
+                return;
             }
-        }
-    });
+
+            if (e.key.toLowerCase() === 'b') {
+                const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+                if (activeTag !== 'textarea' && activeTag !== 'input') {
+                    e.preventDefault();
+                    toggleSidebar();
+                }
+            }
+        });
+    }
 
     // Keyboard shortcut for Kirim
     if (input) {

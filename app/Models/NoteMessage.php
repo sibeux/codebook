@@ -22,4 +22,3 @@ class NoteMessage extends Model
         return $this->belongsTo(Note::class, 'note_id');
     }
 }
-

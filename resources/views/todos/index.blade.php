@@ -25,26 +25,6 @@ body:has(.todo-shell) {
     overflow: hidden;
 }
 
-body:has(.todo-shell) > header,
-body:has(.todo-shell) header {
-    height: 52px;
-    padding: 0 20px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
-    box-shadow: 0 1px 0 rgba(0,0,0,.04);
-    position: relative;
-    z-index: 10;
-    flex-shrink: 0;
-}
-
-body:has(.todo-shell) .brand { gap: 8px; align-items: center; }
-body:has(.todo-shell) .brand h1 { font-size: 15px; letter-spacing: -.02em; }
-body:has(.todo-shell) .header-actions { gap: 8px; }
-body:has(.todo-shell) .user-badge { padding: 5px 10px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--border); }
-body:has(.todo-shell) .icon-btn,
 body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); height: 32px; padding: 0 12px; font-size: 12px; }
 
 .todo-shell {
@@ -52,6 +32,7 @@ body:has(.todo-shell) .primary-btn { border-radius: var(--todo-radius-sm); heigh
     height: calc(100vh - 52px);
     overflow: hidden;
     background: var(--bg);
+    position: relative;
 }
 
 .todo-shell.card-modal-open { overflow: visible; }
@@ -157,8 +138,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
 /* Pane 1: Workspaces and projects */
 .pane-projects {
-    width: 240px;
-    min-width: 200px;
+    width: 280px;
     flex-shrink: 0;
     background: var(--sidebar-bg);
     border-right: 1px solid var(--border);
@@ -1370,7 +1350,6 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
 /* ---- Responsive ---- */
 @media (max-width: 1100px) {
-    .pane-projects { width: 200px; min-width: 160px; }
     .pane-workspace { width: 320px; min-width: 290px; }
     .board-scroll { padding-inline: 14px; gap: 10px; }
     .board-column { width: 230px; min-width: 230px; }
@@ -1420,38 +1399,18 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 {{-- Loading Bar --}}
 <div id="todo-loading-bar" class="todo-loading-bar visible" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" aria-valuenow="8" style="--todo-load-progress:.08"></div>
 
-{{-- ===== HEADER ===== --}}
-<header>
-    <div class="brand">
-        <a href="{{ $detailOnly ? route('todos.index', request()->only(['workspace_id', 'project_id', 'status'])) : route('workspace') }}" style="color:var(--muted);text-decoration:none;font-size:12px;display:inline-flex;align-items:center;gap:4px;padding-right:12px;border-right:1px solid var(--border);">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-            {{ $detailOnly ? 'Board' : 'Notes' }}
-        </a>
-        <h1>Codebook</h1>
-        <span style="background:var(--todo-accent-soft);color:var(--todo-accent);border:1px solid var(--todo-accent-muted);font-family:'Inter',sans-serif;font-weight:600;font-size:10.5px;padding:2px 8px;border-radius:999px;">Tasks</span>
-    </div>
-
-    <div class="header-actions">
-        <div class="user-badge">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <span>{{ Auth::user()->name }}</span>
-        </div>
-        <button class="icon-btn" id="theme-btn" title="Toggle Theme">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-            <span>Theme</span>
-        </button>
-        <form action="{{ route('logout') }}" method="POST" style="margin:0;">
-            @csrf
-            <button type="submit" class="icon-btn">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                Logout
-            </button>
-        </form>
-    </div>
-</header>
+    {{-- ===== HEADER ===== --}}
+    @include('layouts.header', ['detailOnly' => $detailOnly ?? false])
 
 {{-- ===== 3-COLUMN SHELL ===== --}}
 <div class="todo-shell {{ $detailOnly ? 'todo-detail-shell' : '' }} {{ $activeTodo ? 'card-modal-open' : '' }}" data-active-todo-id="{{ $activeTodo?->id ?? '' }}" data-project-id="{{ $currentProjectId ?? '' }}" data-workspace-id="{{ $currentWorkspaceId ?? '' }}">
+
+    <!-- Floating toggle button to reopen sidebar when collapsed -->
+    <button type="button" class="sidebar-floating-toggle" id="sidebar-floating-toggle" title="Buka Sidebar (Ctrl+B)" aria-label="Buka Sidebar">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+    </button>
 
     @if(!$detailOnly)
     {{-- ===== PANE 1: WORKSPACES AND PROJECTS ===== --}}
@@ -3662,15 +3621,6 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
     window.addEventListener('popstate', () => {
         refreshTodoShell(window.location.href).catch((error) => showToast(error.message));
-    });
-
-    // Theme toggle
-    document.getElementById('theme-btn')?.addEventListener('click', () => {
-        const html = document.documentElement;
-        const currentTheme = html.getAttribute('data-theme') || 'dark';
-        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-        html.setAttribute('data-theme', newTheme);
-        localStorage.setItem('codebook_theme', newTheme);
     });
 </script>
 @endsection
