@@ -360,8 +360,56 @@
         });
     }
 
+    // Setup message links to open in a new tab without leaving Codebook
+    function setupLinks(container) {
+        if (!container) return;
+        container.querySelectorAll('a').forEach(function (a) {
+            const href = a.getAttribute('href');
+            if (href && !href.startsWith('#')) {
+                a.setAttribute('target', '_blank');
+                a.setAttribute('rel', 'noopener noreferrer');
+            }
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
-        marked.setOptions({ breaks: true, gfm: true });
+        if (window.DOMPurify) {
+            DOMPurify.addHook('afterSanitizeAttributes', function (node) {
+                if (node.tagName === 'A' && node.hasAttribute('href')) {
+                    const href = node.getAttribute('href');
+                    if (href && !href.startsWith('#')) {
+                        node.setAttribute('target', '_blank');
+                        node.setAttribute('rel', 'noopener noreferrer');
+                    }
+                }
+            });
+        }
+
+        if (window.marked) {
+            const renderer = new marked.Renderer();
+            const originalLink = renderer.link ? renderer.link.bind(renderer) : null;
+            renderer.link = function (hrefOrToken, title, text) {
+                let href = '';
+                let linkTitle = '';
+                let linkText = '';
+
+                if (typeof hrefOrToken === 'object' && hrefOrToken !== null) {
+                    href = hrefOrToken.href || '';
+                    linkTitle = hrefOrToken.title ? ` title="${hrefOrToken.title}"` : '';
+                    linkText = (this.parser && hrefOrToken.tokens) ? this.parser.parseInline(hrefOrToken.tokens) : (hrefOrToken.text || href);
+                } else {
+                    href = hrefOrToken || '';
+                    linkTitle = title ? ` title="${title}"` : '';
+                    linkText = text || href;
+                }
+
+                const isAnchor = href.startsWith('#');
+                const targetAttr = isAnchor ? '' : ' target="_blank" rel="noopener noreferrer"';
+                return `<a href="${href}"${linkTitle}${targetAttr}>${linkText}</a>`;
+            };
+            marked.use({ renderer });
+            marked.setOptions({ breaks: true, gfm: true });
+        }
 
         // Theme toggle
         const themeBtn = document.getElementById('theme-btn');
@@ -479,11 +527,12 @@
                 const mdDiv = document.createElement('div');
                 mdDiv.className = 'md';
                 const rawHtml = marked.parse(m.content || '');
-                mdDiv.innerHTML = DOMPurify.sanitize(rawHtml);
+                mdDiv.innerHTML = DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['target', 'rel'] });
                 mdDiv.querySelectorAll('pre code').forEach(function (block) {
                     hljs.highlightElement(block);
                 });
                 setupCodeBlocks(mdDiv);
+                setupLinks(mdDiv);
 
                 const fade = document.createElement('div');
                 fade.className = 'fade';
@@ -527,6 +576,17 @@
                         toggleBtn.style.display = 'none';
                     }
                 });
+            });
+
+            // Ensure clicking links inside messages opens in a new blank tab
+            thread.addEventListener('click', function (e) {
+                const link = e.target.closest('a');
+                if (!link || !link.closest('.md')) return;
+                const href = link.getAttribute('href');
+                if (href && !href.startsWith('#')) {
+                    link.setAttribute('target', '_blank');
+                    link.setAttribute('rel', 'noopener noreferrer');
+                }
             });
         }
     });

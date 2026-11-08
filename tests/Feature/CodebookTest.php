@@ -253,4 +253,34 @@ class CodebookTest extends TestCase
         $this->assertEquals(2, $messages[1]->order_index);
         $this->assertEquals(3, $messages[2]->order_index);
     }
+
+    public function test_user_can_create_and_fetch_message_containing_links(): void
+    {
+        $user = User::create([
+            'email' => 'link_test@sibeux.my.id',
+            'name' => 'Link Tester',
+            'password' => bcrypt('password'),
+            'role' => 'user',
+        ]);
+
+        $note = Note::create([
+            'user_id' => $user->user_id,
+            'title' => 'Link Note',
+            'mode' => 'markdown',
+        ]);
+
+        $response = $this->actingAs($user)->postJson("/notes/{$note->id}/messages", [
+            'sender' => 'me',
+            'content' => 'Silakan cek website [Codebook](https://codebook.example.com) dan link mentah https://google.com',
+            'sent_time' => '12:00',
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('success', true);
+        $response->assertJsonPath('message.content', 'Silakan cek website [Codebook](https://codebook.example.com) dan link mentah https://google.com');
+
+        $showResponse = $this->actingAs($user)->getJson("/notes/{$note->id}");
+        $showResponse->assertStatus(200);
+        $showResponse->assertJsonPath('note.messages.0.content', 'Silakan cek website [Codebook](https://codebook.example.com) dan link mentah https://google.com');
+    }
 }

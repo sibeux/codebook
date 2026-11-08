@@ -86,7 +86,43 @@ function showConfirmModal(options = {}) {
 window.showConfirmModal = showConfirmModal;
 
 document.addEventListener('DOMContentLoaded', function () {
-    marked.setOptions({ breaks: true, gfm: true });
+    if (window.DOMPurify) {
+        DOMPurify.addHook('afterSanitizeAttributes', function (node) {
+            if (node.tagName === 'A' && node.hasAttribute('href')) {
+                const href = node.getAttribute('href');
+                if (href && !href.startsWith('#')) {
+                    node.setAttribute('target', '_blank');
+                    node.setAttribute('rel', 'noopener noreferrer');
+                }
+            }
+        });
+    }
+
+    if (window.marked) {
+        const renderer = new marked.Renderer();
+        const originalLink = renderer.link ? renderer.link.bind(renderer) : null;
+        renderer.link = function (hrefOrToken, title, text) {
+            let href = '';
+            let linkTitle = '';
+            let linkText = '';
+
+            if (typeof hrefOrToken === 'object' && hrefOrToken !== null) {
+                href = hrefOrToken.href || '';
+                linkTitle = hrefOrToken.title ? ` title="${hrefOrToken.title}"` : '';
+                linkText = (this.parser && hrefOrToken.tokens) ? this.parser.parseInline(hrefOrToken.tokens) : (hrefOrToken.text || href);
+            } else {
+                href = hrefOrToken || '';
+                linkTitle = title ? ` title="${title}"` : '';
+                linkText = text || href;
+            }
+
+            const isAnchor = href.startsWith('#');
+            const targetAttr = isAnchor ? '' : ' target="_blank" rel="noopener noreferrer"';
+            return `<a href="${href}"${linkTitle}${targetAttr}>${linkText}</a>`;
+        };
+        marked.use({ renderer });
+        marked.setOptions({ breaks: true, gfm: true });
+    }
 
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     const thread = document.getElementById('thread');
@@ -105,16 +141,29 @@ document.addEventListener('DOMContentLoaded', function () {
     const hljsDark = document.getElementById('hljs-dark');
     const hljsLight = document.getElementById('hljs-light');
 
-    if (thread && threadScrollTopButton) {
-        const updateThreadScrollTopButton = function () {
-            threadScrollTopButton.hidden = thread.scrollTop < 240;
-        };
+    if (thread) {
+        if (threadScrollTopButton) {
+            const updateThreadScrollTopButton = function () {
+                threadScrollTopButton.hidden = thread.scrollTop < 240;
+            };
 
-        thread.addEventListener('scroll', updateThreadScrollTopButton, { passive: true });
-        threadScrollTopButton.addEventListener('click', function () {
-            thread.scrollTo({ top: 0, behavior: 'smooth' });
+            thread.addEventListener('scroll', updateThreadScrollTopButton, { passive: true });
+            threadScrollTopButton.addEventListener('click', function () {
+                thread.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+            updateThreadScrollTopButton();
+        }
+
+        // Ensure clicking links inside messages opens in a new blank tab
+        thread.addEventListener('click', function (e) {
+            const link = e.target.closest('a');
+            if (!link || !link.closest('.md')) return;
+            const href = link.getAttribute('href');
+            if (href && !href.startsWith('#')) {
+                link.setAttribute('target', '_blank');
+                link.setAttribute('rel', 'noopener noreferrer');
+            }
         });
-        updateThreadScrollTopButton();
     }
 
     let currentSender = 'me';
@@ -595,6 +644,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
             tools.appendChild(copyBtn);
             wrapper.appendChild(tools);
+        });
+    }
+
+    // Setup message links to open in a new tab without leaving Codebook
+    function setupLinks(container) {
+        if (!container) return;
+        container.querySelectorAll('a').forEach(function (a) {
+            const href = a.getAttribute('href');
+            if (href && !href.startsWith('#')) {
+                a.setAttribute('target', '_blank');
+                a.setAttribute('rel', 'noopener noreferrer');
+            }
         });
     }
 
@@ -1288,11 +1349,12 @@ document.addEventListener('DOMContentLoaded', function () {
             mdDiv.className = 'md';
             mdDiv.id = 'md-' + m.id;
             const rawHtml = marked.parse(m.content || '');
-            mdDiv.innerHTML = DOMPurify.sanitize(rawHtml);
+            mdDiv.innerHTML = DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['target', 'rel'] });
             mdDiv.querySelectorAll('pre code').forEach(function (block) {
                 hljs.highlightElement(block);
             });
             setupCodeBlocks(mdDiv);
+            setupLinks(mdDiv);
 
             const fade = document.createElement('div');
             fade.className = 'fade';

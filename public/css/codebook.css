@@ -1170,7 +1170,8 @@ body.is-drag-active .root-dropzone {
   border-radius: 0 6px 6px 0;
   color: var(--text-secondary);
 }
-.md a { color: var(--me); text-decoration: underline; text-decoration-color: currentColor; opacity: 0.9; }
+.md a { color: var(--me); text-decoration: underline; text-decoration-color: currentColor; opacity: 0.9; cursor: pointer; transition: opacity 0.15s ease; }
+.md a:hover { opacity: 1; }
 .md table { border-collapse: collapse; margin: 0 0 10px; width: 100%; font-size: calc(var(--chat-font-size) - 1.5px); display: block; overflow-x: auto; }
 .md th, .md td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
 .md th { background: var(--panel-2); font-weight: 600; }
