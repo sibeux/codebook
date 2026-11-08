@@ -1,12 +1,12 @@
 <div class="tree-folder-group" data-folder-id="{{ $folder->id }}" data-depth="{{ $depth ?? 1 }}">
-    <div class="tree-folder" draggable="true" data-folder-id="{{ $folder->id }}" onclick="toggleFolder(this, event)">
+    <div class="tree-folder collapsed" draggable="true" data-folder-id="{{ $folder->id }}" onclick="toggleFolder(this, event)">
         <div class="tree-label">
-            <button type="button" class="folder-toggle-btn" title="Tutup folder" aria-expanded="true" onclick="event.stopPropagation(); toggleFolder(this.closest('.tree-folder'), event)">
+            <button type="button" class="folder-toggle-btn" title="Buka folder" aria-expanded="false" onclick="event.stopPropagation(); toggleFolder(this.closest('.tree-folder'), event)">
                 <svg class="folder-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="9 18 15 12 9 6"></polyline>
                 </svg>
             </button>
-            <span class="tree-icon folder-icon">&#128194;</span>
+            <span class="tree-icon folder-icon">&#128193;</span>
             <span class="folder-name">{{ $folder->name }}</span>
         </div>
         <div class="item-actions" onclick="event.stopPropagation()">

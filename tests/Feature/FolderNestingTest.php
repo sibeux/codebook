@@ -229,4 +229,26 @@ class FolderNestingTest extends TestCase
 
         $response->assertSee('Deepest Note in Level 10');
     }
+
+    public function test_workspace_view_renders_folders_collapsed_by_default(): void
+    {
+        $folder = Folder::create([
+            'user_id' => $this->user->user_id,
+            'name' => 'Project Documents',
+        ]);
+
+        Note::create([
+            'user_id' => $this->user->user_id,
+            'folder_id' => $folder->id,
+            'title' => 'Specification',
+            'mode' => 'markdown',
+        ]);
+
+        $response = $this->actingAs($this->user)->get('/');
+        $response->assertStatus(200);
+        $response->assertSee('class="tree-folder collapsed"', false);
+        $response->assertSee('aria-expanded="false"', false);
+        $response->assertSee('title="Buka folder"', false);
+        $response->assertDontSee('aria-expanded="true"', false);
+    }
 }
