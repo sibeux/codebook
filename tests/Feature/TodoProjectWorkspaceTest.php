@@ -296,4 +296,33 @@ class TodoProjectWorkspaceTest extends TestCase
             'description' => null,
         ]);
     }
+
+    public function test_workspace_view_renders_workspace_loading_indicator_and_skeleton_assets(): void
+    {
+        $user = $this->makeUser();
+
+        $workspace = TodoWorkspace::create([
+            'user_id' => $user->user_id,
+            'name' => 'Team Workspace',
+            'is_default' => true,
+        ]);
+
+        $project = TodoProject::create([
+            'user_id' => $user->user_id,
+            'workspace_id' => $workspace->id,
+            'name' => 'Mobile App',
+            'color' => '#10b981',
+        ]);
+
+        $response = $this->actingAs($user)->get(route('todos.index', [
+            'workspace_id' => $workspace->id,
+        ]));
+
+        $response->assertOk();
+        $response->assertSee('data-workspace-id="'.$workspace->id.'"', false);
+        $response->assertSee('class="workspace-spinner"', false);
+        $response->assertSee('.workspace-spinner', false);
+        $response->assertSee('createTodoWorkspacePickerSkeleton()', false);
+        $response->assertSee('todo-workspace-picker-skeleton', false);
+    }
 }

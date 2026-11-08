@@ -19,10 +19,6 @@ class TodoController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        $defaultWorkspace = TodoWorkspace::firstOrCreate(
-            ['user_id' => $user->user_id, 'is_default' => true],
-            ['name' => 'Personal'],
-        );
         $workspaces = TodoWorkspace::where('user_id', $user->user_id)
             ->with(['projects' => function ($query) {
                 $query->withCount([
@@ -34,6 +30,18 @@ class TodoController extends Controller
             ->orderByDesc('is_default')
             ->orderBy('name')
             ->get();
+
+        $defaultWorkspace = $workspaces->firstWhere('is_default', true);
+
+        if (! $defaultWorkspace) {
+            $defaultWorkspace = TodoWorkspace::create([
+                'user_id' => $user->user_id,
+                'name' => 'Personal',
+                'is_default' => true,
+            ]);
+            $defaultWorkspace->setRelation('projects', collect());
+            $workspaces->prepend($defaultWorkspace);
+        }
 
         $currentWorkspace = $workspaces->firstWhere('id', $request->integer('workspace_id')) ?? $defaultWorkspace;
         $currentProject = null;

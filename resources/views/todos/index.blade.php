@@ -344,9 +344,13 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 .workspace-group { margin: 4px 0 8px; }
 .workspace-group-header { display: flex; align-items: center; gap: 4px; }
 .workspace-group-header:hover .project-menu-toggle, .workspace-group-header .project-actions:focus-within .project-menu-toggle { opacity: 1; visibility: visible; }
-.workspace-link { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding: 8px 9px; border: 1px solid transparent; border-radius: 7px; color: var(--text-secondary); font-size: 12px; font-weight: 650; text-decoration: none; }
+.workspace-link { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; padding: 8px 9px; border: 1px solid transparent; border-radius: 7px; color: var(--text-secondary); font-size: 12px; font-weight: 650; text-decoration: none; position: relative; }
 .workspace-link:hover, .workspace-link.active { color: var(--text); background: var(--panel-hover); }
 .workspace-link.active { border-color: var(--border); background: var(--panel); }
+.workspace-link.is-loading, .project-link.is-loading { opacity: .78; pointer-events: none; }
+.workspace-spinner { display: none; width: 12px; height: 12px; border: 1.5px solid var(--border); border-top-color: var(--todo-accent); border-radius: 50%; animation: todo-spin .6s linear infinite; margin-left: auto; flex-shrink: 0; }
+.workspace-link.is-loading .workspace-spinner, .project-link.is-loading .workspace-spinner { display: inline-block; }
+@keyframes todo-spin { to { transform: rotate(360deg); } }
 .workspace-toggle { width: 30px; height: 30px; border: 0; border-radius: 6px; color: var(--muted); background: transparent; cursor: pointer; transition: transform var(--todo-transition), background var(--todo-transition); }
 .workspace-toggle:hover { color: var(--text); background: var(--panel-hover); }
 .workspace-toggle[aria-expanded="true"] { transform: rotate(90deg); }
@@ -1354,6 +1358,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 .todo-board-skeleton-card { height: 76px; flex: 0 0 auto; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); }
 .todo-board-skeleton-card.short { height: 60px; }
 .todo-board-skeleton-card.tall { height: 92px; }
+.todo-workspace-picker-skeleton { display: flex; flex-direction: column; align-items: center; text-align: center; margin: auto; }
 
 @keyframes todo-skeleton-shimmer {
     100% { transform: translateX(100%); }
@@ -1463,9 +1468,10 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             @foreach($workspaces as $workspace)
                 <div class="workspace-group">
                     <div class="workspace-group-header">
-                        <a href="{{ route('todos.index', ['workspace_id' => $workspace->id]) }}" onclick="return navigateTodo(event, this)" class="workspace-link {{ $currentWorkspaceId === $workspace->id ? 'active' : '' }}">
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
+                        <a href="{{ route('todos.index', ['workspace_id' => $workspace->id]) }}" onclick="return navigateTodo(event, this)" class="workspace-link {{ $currentWorkspaceId === $workspace->id ? 'active' : '' }}" data-workspace-id="{{ $workspace->id }}">
+                            <svg class="workspace-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="8" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/><rect x="13" y="13" width="8" height="8" rx="1.5"/></svg>
                             <span class="project-link-name">{{ $workspace->name }}</span>
+                            <span class="workspace-spinner" aria-hidden="true"></span>
                         </a>
                         <div class="project-actions">
                             <button class="project-menu-toggle" type="button" aria-label="Workspace options for {{ $workspace->name }}" aria-haspopup="menu" aria-expanded="false" onclick="toggleTodoProjectMenu(event, this)">
@@ -1480,12 +1486,13 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                     <div class="workspace-projects" id="workspace-projects-{{ $workspace->id }}" {{ $currentWorkspaceId === $workspace->id ? '' : 'hidden' }}>
                         @foreach($workspace->projects as $p)
                             <div class="project-row">
-                                <a href="{{ route('todos.index', ['workspace_id' => $workspace->id, 'project_id' => $p->id, 'status' => request('status')]) }}" onclick="return navigateTodo(event, this)" class="project-link {{ $currentProject?->id === $p->id ? 'active' : '' }}">
+                                <a href="{{ route('todos.index', ['workspace_id' => $workspace->id, 'project_id' => $p->id, 'status' => request('status')]) }}" onclick="return navigateTodo(event, this)" class="project-link {{ $currentProject?->id === $p->id ? 'active' : '' }}" data-project-id="{{ $p->id }}" data-workspace-id="{{ $workspace->id }}">
                                     <span class="project-link-left">
                                         <span class="project-dot" style="background:{{ $p->color }};"></span>
                                         <span class="project-link-name">{{ $p->name }}</span>
                                     </span>
                                     <span class="project-count-badge project-pending-count" data-project-id="{{ $p->id }}" data-pending-count="{{ $p->pending_count }}" style="{{ $p->pending_count > 0 ? '' : 'display:none;' }}">{{ $p->pending_count }}</span>
+                                    <span class="workspace-spinner" aria-hidden="true"></span>
                                 </a>
                                 <div class="project-actions">
                                     <button class="project-menu-toggle" type="button" aria-label="Project options for {{ $p->name }}" aria-haspopup="menu" aria-expanded="false" onclick="toggleTodoProjectMenu(event, this)">
@@ -2158,6 +2165,16 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         }
     }
 
+    function createTodoWorkspacePickerSkeleton() {
+        return `
+            <div class="project-picker-card todo-workspace-picker-skeleton" role="status" aria-label="Loading workspace">
+                <div class="todo-skeleton-block" style="width:52px;height:52px;border-radius:15px;margin:0 auto 18px;"></div>
+                <div class="todo-skeleton-block todo-skeleton-title" style="width:180px;height:24px;margin:0 auto 12px;"></div>
+                <div class="todo-skeleton-block todo-skeleton-copy" style="width:280px;height:14px;margin:0 auto 20px;"></div>
+                <div class="todo-skeleton-block" style="width:116px;height:32px;border-radius:6px;margin:0 auto;"></div>
+            </div>`;
+    }
+
     function createTodoBoardSkeleton() {
         const columns = Array.from({ length: 4 }, (_, columnIndex) => {
             const cards = Array.from({ length: columnIndex === 1 ? 3 : 2 }, (_, cardIndex) => {
@@ -2183,11 +2200,12 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             </div>`;
     }
 
-    async function refreshTodoShell(url = window.location.href, { pushState = false, replaceState = false } = {}) {
+    async function refreshTodoShell(url = window.location.href, { pushState = false, replaceState = false, triggerElement = null } = {}) {
         const refreshId = ++todoShellRefreshId;
         const requestedUrl = new URL(url, window.location.href);
         const shouldShowCardModal = requestedUrl.pathname === todoIndexPath && requestedUrl.searchParams.has('active');
         const requestedProjectId = Number(requestedUrl.searchParams.get('project_id')) || null;
+        const requestedWorkspaceId = Number(requestedUrl.searchParams.get('workspace_id')) || null;
         const shell = document.querySelector('.todo-shell');
         const workspace = document.getElementById('task-workspace-container');
         const boardPane = shell?.querySelector('.pane-list');
@@ -2197,8 +2215,45 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         const openingProject = requestedUrl.pathname === todoIndexPath
             && requestedProjectId !== null
             && requestedProjectId !== currentProjectId;
+        const openingWorkspace = requestedUrl.pathname === todoIndexPath
+            && requestedWorkspaceId !== null
+            && requestedWorkspaceId !== currentWorkspaceId;
 
-        if (openingProject && boardPane) {
+        setTodoLoading(true);
+
+        const activeLoadingElements = [];
+        if (triggerElement) {
+            triggerElement.classList.add('is-loading');
+            triggerElement.setAttribute('aria-busy', 'true');
+            activeLoadingElements.push(triggerElement);
+        } else if (openingWorkspace) {
+            const wsLink = document.querySelector(`.workspace-link[data-workspace-id="${requestedWorkspaceId}"]`);
+            if (wsLink) {
+                wsLink.classList.add('is-loading');
+                wsLink.setAttribute('aria-busy', 'true');
+                activeLoadingElements.push(wsLink);
+            }
+        } else if (openingProject) {
+            const projLink = document.querySelector(`.project-link[data-project-id="${requestedProjectId}"]`);
+            if (projLink) {
+                projLink.classList.add('is-loading');
+                projLink.setAttribute('aria-busy', 'true');
+                activeLoadingElements.push(projLink);
+            }
+        }
+
+        if (openingWorkspace && requestedWorkspaceId !== null) {
+            const projectsContainer = document.getElementById(`workspace-projects-${requestedWorkspaceId}`);
+            if (projectsContainer) {
+                projectsContainer.removeAttribute('hidden');
+                const toggle = projectsContainer.closest('.workspace-group')?.querySelector('.workspace-toggle');
+                if (toggle) {
+                    toggle.setAttribute('aria-expanded', 'true');
+                }
+            }
+        }
+
+        if ((openingProject || openingWorkspace) && boardPane) {
             if (!todoBoardSnapshot) {
                 todoBoardSnapshot = {
                     pane: boardPane,
@@ -2208,9 +2263,15 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                 };
             }
 
-            boardPane.classList.remove('project-picker');
-            boardPane.setAttribute('aria-busy', 'true');
-            boardPane.innerHTML = createTodoBoardSkeleton();
+            if (requestedProjectId !== null) {
+                boardPane.classList.remove('project-picker');
+                boardPane.setAttribute('aria-busy', 'true');
+                boardPane.innerHTML = createTodoBoardSkeleton();
+            } else if (openingWorkspace) {
+                boardPane.classList.add('project-picker');
+                boardPane.setAttribute('aria-busy', 'true');
+                boardPane.innerHTML = createTodoWorkspacePickerSkeleton();
+            }
         }
 
         if (closingCardModal && !todoModalFocusAfterCloseId) {
@@ -2251,10 +2312,11 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             }
         }
 
-        if (openingProject) {
+        if (openingProject || openingWorkspace) {
             await waitForTodoLoadingPaint();
 
             if (refreshId !== todoShellRefreshId) {
+                setTodoLoading(false);
                 return;
             }
         }
@@ -2343,6 +2405,16 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             }
 
             throw error;
+        } finally {
+            setTodoLoading(false);
+            activeLoadingElements.forEach((el) => {
+                el.classList.remove('is-loading');
+                el.removeAttribute('aria-busy');
+            });
+            document.querySelectorAll('.workspace-link.is-loading, .project-link.is-loading').forEach((el) => {
+                el.classList.remove('is-loading');
+                el.removeAttribute('aria-busy');
+            });
         }
     }
 
@@ -2353,7 +2425,11 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
         event.preventDefault();
         closeModals();
-        refreshTodoShell(link.href, { pushState: true }).catch((error) => showToast(error.message));
+        if (link) {
+            link.classList.add('is-loading');
+            link.setAttribute('aria-busy', 'true');
+        }
+        refreshTodoShell(link.href, { pushState: true, triggerElement: link }).catch((error) => showToast(error.message));
 
         return false;
     }
