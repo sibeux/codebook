@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   /* Dark Mode - Warm Charcoal / Notion Dark (Eye-Care & Ultra Soft) */
   --bg: #191919;
   --panel: #202020;
@@ -48,6 +49,7 @@
 }
 
 [data-theme="light"] {
+  color-scheme: light;
   /* Light Mode - Warm Paper / Notion Warm Minimalist (Anti-Glare & Natural) */
   --bg: #F7F6F3;
   --panel: #FBFBFA;
@@ -96,6 +98,9 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; height: 100%; }
+input, textarea, select {
+  caret-color: var(--text);
+}
 body {
   background: var(--bg);
   color: var(--text);
@@ -1415,7 +1420,7 @@ body.is-drag-active .root-dropzone {
   background: var(--panel-2);
   border: 1px solid var(--border-hover);
   color: var(--text);
-  caret-color: var(--me);
+  caret-color: var(--text);
   cursor: text;
   font-family: 'JetBrains Mono', monospace;
   font-size: var(--chat-font-size, 14.5px);
@@ -1588,6 +1593,7 @@ body.is-drag-active .root-dropzone {
   background: var(--panel-2);
   border: 1px solid var(--border);
   color: var(--text);
+  caret-color: var(--text);
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 600;
   font-size: 15px;
@@ -1653,6 +1659,7 @@ body.is-drag-active .root-dropzone {
   background: var(--panel-2);
   border: 1px solid var(--border);
   color: var(--text);
+  caret-color: var(--text);
   font-family: 'Inter', sans-serif;
   font-size: 13.5px;
   line-height: 1.5;
@@ -1744,6 +1751,7 @@ body.is-drag-active .root-dropzone {
   background: var(--panel-2);
   border: 1px solid var(--border);
   color: var(--text);
+  caret-color: var(--text);
   font-family: 'Inter', sans-serif;
   font-size: 13.5px;
   padding: 9px 12px;
