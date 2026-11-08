@@ -1966,7 +1966,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
     setTodoLoading(true);
     function finishInitialTodoLoading() {
-        const minimumVisibleTime = 1200;
+        const minimumVisibleTime = 300;
         const elapsedTime = performance.now() - todoInitialLoadingStartedAt;
         const remainingTime = Math.max(0, minimumVisibleTime - elapsedTime);
 

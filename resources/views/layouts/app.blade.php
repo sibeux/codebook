@@ -11,9 +11,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
     <!-- Marked.js, DOMPurify, Highlight.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/11.1.1/marked.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" defer></script>
 
     <!-- Code Syntax Highlighting Themes -->
     <link id="hljs-dark" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
@@ -39,6 +39,7 @@
     @yield('styles')
 </head>
 <body>
+    <div id="global-page-progress" class="global-page-progress" role="progressbar" aria-hidden="true" style="--page-load-progress: 0;"></div>
 
     @yield('content')
 
@@ -159,6 +160,78 @@
                         toggleSidebar();
                     }
                 }
+            });
+        })();
+
+        // Global Page Navigation Feedback (Instant Tab Active & Top Progress Bar)
+        (function() {
+            const progressBar = document.getElementById('global-page-progress');
+            let progressTimer = null;
+            let currentProgress = 0;
+
+            function startProgress() {
+                if (!progressBar) return;
+                window.clearInterval(progressTimer);
+                currentProgress = 0.18;
+                progressBar.style.setProperty('--page-load-progress', String(currentProgress));
+                progressBar.classList.add('visible');
+
+                progressTimer = window.setInterval(() => {
+                    if (currentProgress < 0.86) {
+                        currentProgress += (0.86 - currentProgress) * 0.14;
+                        progressBar.style.setProperty('--page-load-progress', String(currentProgress));
+                    }
+                }, 130);
+            }
+
+            function stopProgress() {
+                if (!progressBar) return;
+                window.clearInterval(progressTimer);
+                currentProgress = 1;
+                progressBar.style.setProperty('--page-load-progress', '1');
+                window.setTimeout(() => {
+                    progressBar.classList.remove('visible');
+                    progressBar.style.setProperty('--page-load-progress', '0');
+                }, 220);
+            }
+
+            // Restore state if page was restored from bfcache
+            window.addEventListener('pageshow', function() {
+                stopProgress();
+                document.querySelectorAll('.header-tab.is-navigating').forEach(tab => {
+                    tab.classList.remove('is-navigating');
+                });
+            });
+
+            window.addEventListener('beforeunload', function() {
+                if (progressBar && progressBar.classList.contains('visible')) {
+                    progressBar.style.setProperty('--page-load-progress', '1');
+                }
+            });
+
+            document.addEventListener('click', function(e) {
+                const tab = e.target.closest('.header-tab');
+                const backBtn = e.target.closest('.header-back-btn');
+                const brandLogo = e.target.closest('.brand-logo');
+                const target = tab || backBtn || brandLogo;
+
+                if (!target) return;
+
+                // Ignore clicks with modifiers or opening in new window/tab
+                if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0 || target.getAttribute('target') === '_blank') {
+                    return;
+                }
+
+                if (tab) {
+                    if (tab.classList.contains('active')) return;
+                    const nav = tab.closest('.header-nav-tabs');
+                    if (nav) {
+                        nav.querySelectorAll('.header-tab').forEach(t => t.classList.remove('active', 'is-navigating'));
+                    }
+                    tab.classList.add('active', 'is-navigating');
+                }
+
+                startProgress();
             });
         })();
     </script>

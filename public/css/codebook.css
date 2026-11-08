@@ -199,11 +199,49 @@ header {
   background: var(--panel-hover);
 }
 
-.header-tab.active {
+.header-tab.active,
+.header-tab.is-navigating {
   color: var(--text);
   background: var(--bg);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   font-weight: 600;
+}
+
+.header-tab.is-navigating {
+  pointer-events: none;
+}
+
+/* Global Top Navigation Progress Bar */
+.global-page-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2.5px;
+  z-index: 999999;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.14s ease;
+}
+
+.global-page-progress::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #d97706 0%, #f59e0b 45%, #6366f1 100%);
+  box-shadow: 0 0 10px rgba(217, 119, 6, 0.7);
+  transform: scaleX(var(--page-load-progress, 0));
+  transform-origin: left center;
+  transition: transform 0.18s cubic-bezier(0.1, 0.8, 0.2, 1);
+}
+
+.global-page-progress.visible {
+  opacity: 1;
+  visibility: visible;
 }
 
 .header-tab svg {
