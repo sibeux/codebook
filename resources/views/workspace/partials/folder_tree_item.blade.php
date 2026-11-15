@@ -11,6 +11,9 @@
         </div>
         <div class="item-actions" onclick="event.stopPropagation()">
             <button type="button" class="mini-btn" title="Tambah catatan atau subfolder" onclick="openFolderAddChoiceModal({{ $folder->id }}, event)">&#43;</button>
+            <button type="button" class="mini-btn folder-rename-btn" title="Ubah nama folder" aria-label="Ubah nama folder {{ $folder->name }}" onclick="openRenameFolderModal({{ $folder->id }}, event)">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 4 4 4"/><path d="M4 20l4.5-1 10.8-10.8a2.1 2.1 0 0 0-3-3L5.5 16 4 20Z"/><path d="M13.5 6.5l4 4"/></svg>
+            </button>
             <button type="button" class="mini-btn danger" title="Hapus Folder" onclick="deleteFolder({{ $folder->id }})">&times;</button>
         </div>
     </div>

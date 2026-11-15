@@ -1943,6 +1943,93 @@ function openNewFolderModal(parentId = null) {
     setTimeout(() => document.getElementById('folder-name-input').focus(), 50);
 }
 
+function openRenameFolderModal(folderId, event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+
+    const folderGroup = document.querySelector(`.tree-folder-group[data-folder-id="${folderId}"]`);
+    const folderName = folderGroup?.querySelector(':scope > .tree-folder .folder-name')?.textContent.trim();
+
+    if (!folderName) {
+        return;
+    }
+
+    document.getElementById('rename-folder-id').value = String(folderId);
+    const nameInput = document.getElementById('rename-folder-name-input');
+    nameInput.value = folderName;
+    document.getElementById('renameFolderModal').classList.add('active');
+    setTimeout(() => {
+        nameInput.focus();
+        nameInput.select();
+    }, 50);
+}
+
+async function submitRenameFolder(event) {
+    event.preventDefault();
+
+    const folderId = document.getElementById('rename-folder-id').value;
+    const nameInput = document.getElementById('rename-folder-name-input');
+    const name = nameInput.value.trim();
+    const submitButton = document.getElementById('rename-folder-submit');
+    const folderGroup = document.querySelector(`.tree-folder-group[data-folder-id="${folderId}"]`);
+    const folderNameElement = folderGroup?.querySelector(':scope > .tree-folder .folder-name');
+    const previousName = folderNameElement?.textContent.trim() || '';
+
+    if (!name) {
+        nameInput.focus();
+        return;
+    }
+
+    submitButton.disabled = true;
+
+    try {
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+        const response = await fetch(`/folders/${folderId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ name })
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !data.success || !data.folder) {
+            throw new Error(data.message || Object.values(data.errors || {}).flat()[0] || 'Gagal mengubah nama folder.');
+        }
+
+        const savedName = data.folder.name;
+        if (folderNameElement) {
+            folderNameElement.textContent = savedName;
+        }
+
+        const renameButton = folderGroup?.querySelector('.folder-rename-btn');
+        if (renameButton) {
+            renameButton.setAttribute('aria-label', `Ubah nama folder ${savedName}`);
+        }
+
+        document.querySelectorAll('#folder-parent-select option, #note-folder-select option').forEach((option) => {
+            if (option.value !== String(folderId)) {
+                return;
+            }
+
+            const optionName = option.dataset.folderName || previousName;
+            const optionNameIndex = option.textContent.lastIndexOf(optionName);
+            option.textContent = optionNameIndex >= 0
+                ? `${option.textContent.slice(0, optionNameIndex)}${savedName}${option.textContent.slice(optionNameIndex + optionName.length)}`
+                : savedName;
+            option.dataset.folderName = savedName;
+        });
+
+        closeModal('renameFolderModal');
+    } catch (error) {
+        alert(error.message || 'Gagal mengubah nama folder.');
+    } finally {
+        submitButton.disabled = false;
+    }
+}
+
 function openNewNoteModal(folderId = null) {
     document.getElementById('note-title-modal-input').value = '';
     const select = document.getElementById('note-folder-select');
@@ -2023,6 +2110,9 @@ async function submitNewFolder(e) {
                         </div>
                         <div class="item-actions" onclick="event.stopPropagation()">
                             <button type="button" class="mini-btn" title="Tambah catatan atau subfolder" onclick="openFolderAddChoiceModal(${data.folder.id}, event)">&#43;</button>
+                            <button type="button" class="mini-btn folder-rename-btn" title="Ubah nama folder" aria-label="Ubah nama folder ${data.folder.name}" onclick="openRenameFolderModal(${data.folder.id}, event)">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 4 4 4"/><path d="M4 20l4.5-1 10.8-10.8a2.1 2.1 0 0 0-3-3L5.5 16 4 20Z"/><path d="M13.5 6.5l4 4"/></svg>
+                            </button>
                             <button type="button" class="mini-btn danger" title="Hapus Folder" onclick="deleteFolder(${data.folder.id})">&times;</button>
                         </div>
                     </div>
@@ -2076,6 +2166,7 @@ async function submitNewFolder(e) {
                 const opt = document.createElement('option');
                 opt.value = data.folder.id;
                 opt.setAttribute('data-depth', depth);
+                opt.dataset.folderName = data.folder.name;
                 opt.innerHTML = `${indent}${prefix}${data.folder.name}${depth >= 10 ? ' (Maksimal level 10)' : ''}`;
                 if (depth >= 10) opt.disabled = true;
                 folderSelect.appendChild(opt);
@@ -2085,6 +2176,7 @@ async function submitNewFolder(e) {
             if (noteSelect) {
                 const opt = document.createElement('option');
                 opt.value = data.folder.id;
+                opt.dataset.folderName = data.folder.name;
                 opt.innerHTML = `${indent}${prefix}${data.folder.name}`;
                 noteSelect.appendChild(opt);
             }

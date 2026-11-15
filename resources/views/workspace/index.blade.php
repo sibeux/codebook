@@ -202,6 +202,27 @@
     </div>
 </main>
 
+<!-- Modal: Rename Folder -->
+<div class="modal-overlay" id="renameFolderModal" role="dialog" aria-modal="true" aria-labelledby="rename-folder-modal-title">
+    <div class="modal">
+        <div class="choice-modal-header">
+            <h3 class="modal-title" id="rename-folder-modal-title">Ubah Nama Folder</h3>
+            <button type="button" class="mini-btn" onclick="closeModal('renameFolderModal')" title="Tutup" aria-label="Tutup" style="font-size:16px;padding:2px 6px;">&times;</button>
+        </div>
+        <form id="renameFolderForm" onsubmit="submitRenameFolder(event)">
+            <input type="hidden" id="rename-folder-id">
+            <div class="form-group" style="margin-bottom:12px;">
+                <label for="rename-folder-name-input" style="font-size:11px;color:var(--muted);text-transform:uppercase;">Nama Folder</label>
+                <input type="text" id="rename-folder-name-input" class="modal-input" required maxlength="255" placeholder="Nama folder...">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="icon-btn" onclick="closeModal('renameFolderModal')">Batal</button>
+                <button type="submit" class="icon-btn btn-primary" id="rename-folder-submit">Simpan Nama</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Modal: New Folder -->
 <div class="modal-overlay" id="newFolderModal">
     <div class="modal">
@@ -213,7 +234,7 @@
                 <select id="folder-parent-select" class="modal-input" style="background:var(--panel-2);" onchange="document.getElementById('folder-parent-id').value = this.value">
                     <option value="">-- Tingkat Utama (Root) --</option>
                     @foreach ($flatFolderTree as $f)
-                        <option value="{{ $f->id }}" {{ $f->depth >= 10 ? 'disabled' : '' }} data-depth="{{ $f->depth }}">
+                        <option value="{{ $f->id }}" {{ $f->depth >= 10 ? 'disabled' : '' }} data-depth="{{ $f->depth }}" data-folder-name="{{ $f->name }}">
                             {!! str_repeat('&nbsp;&nbsp;&nbsp;', $f->depth - 1) !!}{{ $f->depth > 1 ? '└─ ' : '' }}{{ $f->name }}{{ $f->depth >= 10 ? ' (Maksimal level 10)' : '' }}
                         </option>
                     @endforeach
@@ -252,7 +273,7 @@
                 <select id="note-folder-select" class="modal-input" style="background:var(--panel-2);">
                     <option value="">-- Tanpa Folder (Catatan Utama) --</option>
                     @foreach ($flatFolderTree as $f)
-                        <option value="{{ $f->id }}">
+                        <option value="{{ $f->id }}" data-folder-name="{{ $f->name }}">
                             {!! str_repeat('&nbsp;&nbsp;&nbsp;', $f->depth - 1) !!}{{ $f->depth > 1 ? '└─ ' : '' }}{{ $f->name }}
                         </option>
                     @endforeach
