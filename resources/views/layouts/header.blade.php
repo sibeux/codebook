@@ -63,7 +63,7 @@
         </button>
 
         @auth
-            <form action="{{ route('logout') }}" method="POST" style="margin:0;">
+            <form action="{{ route('logout') }}" method="POST" id="logout-form" style="margin:0;">
                 @csrf
                 <button type="submit" class="icon-btn" title="Keluar dari akun">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -77,3 +77,97 @@
         @endauth
     </div>
 </header>
+
+@auth
+    <div class="modal-overlay logout-confirm-overlay" id="logout-confirm-modal" role="presentation" aria-hidden="true">
+        <section class="modal confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="logout-confirm-title" aria-describedby="logout-confirm-message">
+            <div class="confirm-modal-body">
+                <div class="confirm-modal-icon logout-confirm-icon" aria-hidden="true">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                </div>
+                <div class="confirm-modal-text">
+                    <h2 class="modal-title" id="logout-confirm-title">Keluar dari akun?</h2>
+                    <p class="confirm-modal-message" id="logout-confirm-message">Anda perlu masuk kembali untuk mengakses Codebook.</p>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="icon-btn" id="logout-confirm-cancel">Batal</button>
+                <button type="button" class="icon-btn btn-primary" id="logout-confirm-submit">
+                    <span id="logout-confirm-submit-label">Keluar</span>
+                    <svg class="logout-submit-spinner" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                        <circle cx="12" cy="12" r="9" />
+                    </svg>
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        (function () {
+            const logoutForm = document.getElementById('logout-form');
+            const modal = document.getElementById('logout-confirm-modal');
+            const cancelButton = document.getElementById('logout-confirm-cancel');
+            const confirmButton = document.getElementById('logout-confirm-submit');
+            const logoutButton = logoutForm?.querySelector('button[type="submit"]');
+            let isLogoutConfirmed = false;
+
+            if (!logoutForm || !modal || !cancelButton || !confirmButton) {
+                return;
+            }
+
+            function closeModal() {
+                modal.classList.remove('active');
+                modal.setAttribute('aria-hidden', 'true');
+                logoutButton?.focus();
+            }
+
+            logoutForm.addEventListener('submit', function (event) {
+                if (isLogoutConfirmed) {
+                    return;
+                }
+
+                event.preventDefault();
+                modal.classList.add('active');
+                modal.setAttribute('aria-hidden', 'false');
+                cancelButton.focus();
+            });
+
+            cancelButton.addEventListener('click', closeModal);
+            confirmButton.addEventListener('click', function () {
+                isLogoutConfirmed = true;
+                confirmButton.disabled = true;
+                confirmButton.setAttribute('aria-busy', 'true');
+                document.getElementById('logout-confirm-submit-label').textContent = 'Keluar…';
+                logoutForm.requestSubmit();
+            });
+
+            modal.addEventListener('click', function (event) {
+                if (event.target === modal) {
+                    closeModal();
+                }
+            });
+
+            document.addEventListener('keydown', function (event) {
+                if (!modal.classList.contains('active')) {
+                    return;
+                }
+
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    closeModal();
+                } else if (event.key === 'Tab') {
+                    const focusedButton = document.activeElement === confirmButton ? confirmButton : cancelButton;
+
+                    if ((event.shiftKey && focusedButton === cancelButton) || (!event.shiftKey && focusedButton === confirmButton)) {
+                        event.preventDefault();
+                        (focusedButton === cancelButton ? confirmButton : cancelButton).focus();
+                    }
+                }
+            });
+        })();
+    </script>
+@endauth
