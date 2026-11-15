@@ -571,6 +571,62 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 .badge-high    { background: rgba(249,115,22,.12); color: #fb923c; border: 1px solid rgba(249,115,22,.22); }
 .badge-medium  { background: rgba(99,102,241,.12); color: #818cf8; border: 1px solid rgba(99,102,241,.22); }
 .badge-low     { background: rgba(107,114,128,.1); color: #9ca3af; border: 1px solid rgba(107,114,128,.2); }
+.task-priority-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 8px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 650;
+    line-height: 1;
+    text-transform: capitalize;
+    white-space: nowrap;
+}
+.task-priority-value.priority-urgent { color: #dc2626; background: rgba(239, 68, 68, .09); border-color: rgba(239, 68, 68, .2); }
+.task-priority-value.priority-high { color: #ea580c; background: rgba(249, 115, 22, .09); border-color: rgba(249, 115, 22, .2); }
+.task-priority-value.priority-medium { color: #6366f1; background: rgba(99, 102, 241, .09); border-color: rgba(99, 102, 241, .2); }
+.task-priority-value.priority-low { color: #71717a; background: rgba(113, 113, 122, .08); border-color: rgba(113, 113, 122, .18); }
+.task-priority-dot { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: currentColor; }
+.task-priority-trigger { font: inherit; cursor: pointer; transition: filter .15s ease, transform .15s ease; }
+.task-priority-trigger:hover { filter: brightness(1.08); transform: translateY(-1px); }
+.task-priority-trigger:focus-visible { outline: 2px solid var(--todo-accent); outline-offset: 2px; }
+.task-priority-trigger svg { width: 9px; height: 9px; margin-left: 1px; opacity: .72; }
+.task-priority-popup {
+    position: fixed;
+    z-index: 1400;
+    box-sizing: border-box;
+    width: min(252px, calc(100vw - 24px));
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--panel);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, .24), 0 3px 10px rgba(0, 0, 0, .12);
+    animation: taskPriorityPopupIn .14s ease-out;
+}
+.task-priority-popup[hidden] { display: none; }
+.task-priority-popup-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 3px 3px 10px; }
+.task-priority-popup-eyebrow { margin: 0 0 3px; color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+.task-priority-popup-title { margin: 0; color: var(--text); font-size: 13px; font-weight: 700; }
+.task-priority-popup-close { display: grid; place-items: center; width: 26px; height: 26px; margin: -3px -3px 0 0; border: 0; border-radius: 7px; color: var(--muted); background: transparent; cursor: pointer; }
+.task-priority-popup-close:hover { color: var(--text); background: var(--panel-hover); }
+.task-priority-options { display: grid; gap: 4px; }
+.task-priority-option { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 39px; padding: 0 9px; border: 1px solid transparent; border-radius: 9px; color: var(--text-secondary); background: transparent; font: inherit; text-align: left; cursor: pointer; transition: background .15s ease, border-color .15s ease, color .15s ease; }
+.task-priority-option:hover { border-color: var(--border); color: var(--text); background: var(--panel-2); }
+.task-priority-option[aria-pressed="true"] { border-color: color-mix(in srgb, var(--todo-accent) 28%, var(--border)); color: var(--text); background: color-mix(in srgb, var(--todo-accent) 8%, var(--panel)); }
+.task-priority-option-dot { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 50%; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 13%, transparent); }
+.task-priority-option-label { flex: 1; font-size: 11.5px; font-weight: 650; }
+.task-priority-option-hint { color: var(--muted); font-size: 9.5px; }
+.task-priority-option-check { width: 14px; height: 14px; color: var(--todo-accent); opacity: 0; }
+.task-priority-option[aria-pressed="true"] .task-priority-option-check { opacity: 1; }
+.task-priority-option[data-priority="urgent"] .task-priority-option-dot { color: #ef4444; background: #ef4444; }
+.task-priority-option[data-priority="high"] .task-priority-option-dot { color: #f97316; background: #f97316; }
+.task-priority-option[data-priority="medium"] .task-priority-option-dot { color: #818cf8; background: #818cf8; }
+.task-priority-option[data-priority="low"] .task-priority-option-dot { color: #9ca3af; background: #9ca3af; }
+.task-priority-popup-footer { margin: 9px 3px 1px; color: var(--muted); font-size: 9px; }
+@keyframes taskPriorityPopupIn { from { opacity: 0; transform: translateY(4px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .task-priority-popup, .task-priority-trigger, .task-priority-option { animation: none; transition: none; } }
 
 .task-meta-sep { width: 3px; height: 3px; border-radius: 50%; background: var(--border-hover); flex-shrink: 0; }
 
@@ -1510,25 +1566,27 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                     </header>
                     <div class="board-column-cards">
                         @forelse($columnTodos as $t)
-                            <article class="task-card board-task-card {{ $t->status === 'done' ? 'done' : '' }} {{ $activeTodo?->id === $t->id ? 'active' : '' }}" id="task-card-{{ $t->id }}" data-project-id="{{ $t->todo_project_id }}" data-todo-id="{{ $t->id }}" data-list-id="{{ $column->id }}" data-status="{{ $t->status }}" data-persisted-list-id="{{ $column->id }}" data-persisted-status="{{ $t->status }}" draggable="true" ondragstart="startTodoDrag(event, {{ $t->id }})" ondragend="endTodoDrag(event)">
+                            <article class="task-card board-task-card {{ $t->status === 'done' ? 'done' : '' }} {{ $activeTodo?->id === $t->id ? 'active' : '' }}" id="task-card-{{ $t->id }}" data-project-id="{{ $t->todo_project_id }}" data-todo-id="{{ $t->id }}" data-list-id="{{ $column->id }}" data-status="{{ $t->status }}" data-persisted-list-id="{{ $column->id }}" data-persisted-status="{{ $t->status }}" data-priority="{{ $t->priority }}" data-persisted-priority="{{ $t->priority }}" draggable="true" ondragstart="startTodoDrag(event, {{ $t->id }})" ondragend="endTodoDrag(event)">
                                 <div class="task-checkbox-wrap">
                                     <input type="checkbox" class="task-checkbox" aria-label="Mark {{ $t->title }} done" {{ $t->status === 'done' ? 'checked' : '' }} onclick="event.stopPropagation(); toggleTaskDone({{ $t->id }}, this.checked)">
                                 </div>
                                 <div class="task-card-body">
                                     <a class="task-card-link" href="{{ route('todos.index', array_merge(request()->query(), ['active' => $t->id])) }}">
                                         <div class="task-title-text"><span class="task-title-label">{{ $t->title }}</span></div>
-                                        <div class="task-card-meta">
-                                            @if($t->project)
-                                                <span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--muted);">
-                                                    <span class="project-dot" style="width:5px;height:5px;background:{{ $t->project->color }};"></span>{{ $t->project->name }}
-                                                </span>
-                                            @endif
-                                            <span class="badge badge-{{ $t->priority }}">{{ $t->priority }}</span>
-                                            @if($t->items->count() > 0)
-                                                <span class="task-items-count"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>{{ $t->items->count() }}</span>
-                                            @endif
-                                        </div>
                                     </a>
+                                    <div class="task-card-meta">
+                                        @if($t->project)
+                                            <span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--muted);">
+                                                <span class="project-dot" style="width:5px;height:5px;background:{{ $t->project->color }};"></span>{{ $t->project->name }}
+                                            </span>
+                                        @endif
+                                        <span class="task-priority-badge task-priority-value priority-{{ $t->priority }}" data-todo-id="{{ $t->id }}" data-priority="{{ $t->priority }}" data-persisted-priority="{{ $t->priority }}">
+                                            <span class="task-priority-dot" aria-hidden="true"></span><span class="task-priority-label">{{ $t->priority }}</span>
+                                        </span>
+                                        @if($t->items->count() > 0)
+                                            <span class="task-items-count"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>{{ $t->items->count() }}</span>
+                                        @endif
+                                    </div>
                                 </div>
                             </article>
                         @empty
@@ -1589,7 +1647,10 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                             <div class="ws-header-top">
                                 <div style="flex:1;min-width:0;">
                                     <div class="ws-header-badges">
-                                        <span class="badge badge-{{ $activeTodo->priority }}" id="ws-badge-priority">{{ $activeTodo->priority }}</span>
+                                        <button type="button" class="task-priority-badge task-priority-value task-priority-trigger priority-{{ $activeTodo->priority }}" id="ws-badge-priority" data-todo-id="{{ $activeTodo->id }}" data-priority="{{ $activeTodo->priority }}" data-persisted-priority="{{ $activeTodo->priority }}" aria-label="Change priority for {{ $activeTodo->title }}" aria-haspopup="dialog" aria-expanded="false" onclick="openTaskPriorityPopup(event, this)">
+                                            <span class="task-priority-dot" aria-hidden="true"></span><span class="task-priority-label">{{ $activeTodo->priority }}</span>
+                                            <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 4.5 3 3 3-3"/></svg>
+                                        </button>
                                         @if($activeTodo->project)
                                             <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted);">
                                                 <span class="project-dot" style="background:{{ $activeTodo->project->color }};"></span>
@@ -1891,6 +1952,37 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     </section>
 </div>
 
+<div id="task-priority-popup" class="task-priority-popup" role="dialog" aria-label="Change card priority" hidden>
+    <div class="task-priority-popup-header">
+        <div>
+            <p class="task-priority-popup-eyebrow">Card settings</p>
+            <h2 class="task-priority-popup-title">Priority</h2>
+        </div>
+        <button type="button" class="task-priority-popup-close" aria-label="Close priority menu" onclick="closeTaskPriorityPopup(true)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m18 6-12 12M6 6l12 12"/></svg>
+        </button>
+    </div>
+    <div class="task-priority-options">
+        <button type="button" class="task-priority-option" data-priority="urgent" onclick="selectTaskPriority('urgent')">
+            <span class="task-priority-option-dot" aria-hidden="true"></span><span class="task-priority-option-label">Urgent</span><span class="task-priority-option-hint">Do first</span>
+            <svg class="task-priority-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
+        </button>
+        <button type="button" class="task-priority-option" data-priority="high" onclick="selectTaskPriority('high')">
+            <span class="task-priority-option-dot" aria-hidden="true"></span><span class="task-priority-option-label">High</span><span class="task-priority-option-hint">Important</span>
+            <svg class="task-priority-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
+        </button>
+        <button type="button" class="task-priority-option" data-priority="medium" onclick="selectTaskPriority('medium')">
+            <span class="task-priority-option-dot" aria-hidden="true"></span><span class="task-priority-option-label">Medium</span><span class="task-priority-option-hint">Normal pace</span>
+            <svg class="task-priority-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
+        </button>
+        <button type="button" class="task-priority-option" data-priority="low" onclick="selectTaskPriority('low')">
+            <span class="task-priority-option-dot" aria-hidden="true"></span><span class="task-priority-option-label">Low</span><span class="task-priority-option-hint">When free</span>
+            <svg class="task-priority-option-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 4 4L19 6"/></svg>
+        </button>
+    </div>
+    <p class="task-priority-popup-footer">Updates automatically</p>
+</div>
+
 <div id="todo-toast" class="todo-toast" role="alert" aria-live="assertive"></div>
 @endsection
 
@@ -1904,6 +1996,103 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     const todoSystemListIds = @json($todoLists->whereNotNull('system_status')->pluck('id', 'system_status'));
     const todoIndexPath = new URL("{{ route('todos.index') }}", window.location.origin).pathname;
     let todoLoadingRequests = 0;
+    let activeTaskPriorityTrigger = null;
+    const taskPriorityPopup = document.getElementById('task-priority-popup');
+
+    if (taskPriorityPopup) {
+        document.body.appendChild(taskPriorityPopup);
+    }
+
+    function openTaskPriorityPopup(event, trigger) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (!taskPriorityPopup) {
+            return;
+        }
+
+        if (activeTaskPriorityTrigger === trigger && !taskPriorityPopup.hidden) {
+            closeTaskPriorityPopup(false);
+            return;
+        }
+
+        if (activeTaskPriorityTrigger) {
+            activeTaskPriorityTrigger.setAttribute('aria-expanded', 'false');
+        }
+
+        activeTaskPriorityTrigger = trigger;
+        trigger.setAttribute('aria-expanded', 'true');
+        taskPriorityPopup.querySelectorAll('.task-priority-option').forEach(function (option) {
+            option.setAttribute('aria-pressed', String(option.dataset.priority === trigger.dataset.priority));
+        });
+
+        taskPriorityPopup.hidden = false;
+        taskPriorityPopup.style.visibility = 'hidden';
+        const triggerRect = trigger.getBoundingClientRect();
+        const popupRect = taskPriorityPopup.getBoundingClientRect();
+        const viewportPadding = 12;
+        const left = Math.max(viewportPadding, Math.min(triggerRect.left, window.innerWidth - popupRect.width - viewportPadding));
+        let top = triggerRect.bottom + 8;
+
+        if (top + popupRect.height > window.innerHeight - viewportPadding) {
+            top = triggerRect.top - popupRect.height - 8;
+        }
+
+        taskPriorityPopup.style.left = `${left}px`;
+        taskPriorityPopup.style.top = `${Math.max(viewportPadding, top)}px`;
+        taskPriorityPopup.style.visibility = '';
+        taskPriorityPopup.querySelector('.task-priority-option[aria-pressed="true"]')?.focus();
+    }
+
+    function closeTaskPriorityPopup(restoreFocus = false) {
+        if (!taskPriorityPopup || taskPriorityPopup.hidden) {
+            return;
+        }
+
+        taskPriorityPopup.hidden = true;
+        taskPriorityPopup.style.visibility = '';
+
+        if (activeTaskPriorityTrigger) {
+            activeTaskPriorityTrigger.setAttribute('aria-expanded', 'false');
+
+            if (restoreFocus) {
+                activeTaskPriorityTrigger.focus();
+            }
+        }
+
+        activeTaskPriorityTrigger = null;
+    }
+
+    function selectTaskPriority(priority) {
+        if (!activeTaskPriorityTrigger) {
+            return;
+        }
+
+        const trigger = activeTaskPriorityTrigger;
+        closeTaskPriorityPopup(true);
+        updateTaskPriority(trigger, priority);
+    }
+
+    document.addEventListener('click', function (event) {
+        if (taskPriorityPopup && !taskPriorityPopup.hidden && !taskPriorityPopup.contains(event.target) && !event.target.closest('.task-priority-trigger')) {
+            closeTaskPriorityPopup(false);
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && taskPriorityPopup && !taskPriorityPopup.hidden) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            closeTaskPriorityPopup(true);
+        }
+    });
+
+    document.addEventListener('scroll', function () {
+        closeTaskPriorityPopup(false);
+    }, true);
+    window.addEventListener('resize', function () {
+        closeTaskPriorityPopup(false);
+    });
     let todoLoadingHideTimer;
     let todoLoadingProgressTimer;
     let todoLoadingProgress = 0;
@@ -3083,12 +3272,109 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                 card.dataset.persistedListId = payload.todo.todo_list_id === null ? '' : String(payload.todo.todo_list_id);
             }
 
+            if (payload.todo && Object.prototype.hasOwnProperty.call(payload.todo, 'priority')) {
+                card.dataset.persistedPriority = payload.todo.priority;
+                document.querySelectorAll(`.task-priority-value[data-todo-id="${todoId}"]`).forEach(function (priorityValue) {
+                    priorityValue.dataset.persistedPriority = payload.todo.priority;
+                });
+            }
+
             return payload.todo;
         });
 
         card.todoSaveQueue = currentSave;
 
         return currentSave;
+    }
+
+    function syncTaskPriorityControls(todoId, priority, isPersisted = false) {
+        const card = document.getElementById(`task-card-${todoId}`);
+
+        if (card) {
+            card.dataset.priority = priority;
+        }
+
+        const priorityClasses = ['priority-low', 'priority-medium', 'priority-high', 'priority-urgent'];
+
+        document.querySelectorAll(`.task-priority-value[data-todo-id="${todoId}"]`).forEach(function (priorityValue) {
+            priorityValue.dataset.priority = priority;
+            priorityValue.classList.remove(...priorityClasses);
+            priorityValue.classList.add(`priority-${priority}`);
+            priorityValue.querySelector('.task-priority-label').textContent = priority;
+
+            if (isPersisted) {
+                priorityValue.dataset.persistedPriority = priority;
+            }
+        });
+
+        taskPriorityPopup?.querySelectorAll('.task-priority-option').forEach(function (option) {
+            option.setAttribute('aria-pressed', String(option.dataset.priority === priority));
+        });
+
+        if (card && isPersisted) {
+            card.dataset.persistedPriority = priority;
+        }
+    }
+
+    async function updateTaskPriority(priorityTrigger, nextPriority) {
+        const todoId = Number(priorityTrigger.dataset.todoId);
+        const card = document.getElementById(`task-card-${todoId}`);
+        const previousPriority = card?.dataset.priority || priorityTrigger.dataset.persistedPriority || priorityTrigger.dataset.priority;
+        const sequence = Number(card?.dataset.prioritySequence || priorityTrigger.dataset.prioritySequence || 0) + 1;
+
+        if (card) {
+            card.dataset.prioritySequence = String(sequence);
+        } else {
+            priorityTrigger.dataset.prioritySequence = String(sequence);
+        }
+
+        syncTaskPriorityControls(todoId, nextPriority);
+
+        try {
+            let todo;
+
+            if (card) {
+                todo = await queueTodoCardUpdate(card, { priority: nextPriority });
+            } else {
+                const previousSave = priorityTrigger.todoPrioritySaveQueue || Promise.resolve();
+                const currentSave = previousSave.catch(() => {}).then(async function () {
+                    const response = await todoFetch(`/todos/${todoId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+                        body: JSON.stringify({ priority: nextPriority })
+                    });
+                    const payload = await response.json().catch(() => ({}));
+
+                    if (!response.ok) {
+                        const message = payload.message || Object.values(payload.errors || {}).flat()[0] || 'Priority tidak dapat disimpan.';
+                        throw new Error(message);
+                    }
+
+                    return payload.todo;
+                });
+
+                priorityTrigger.todoPrioritySaveQueue = currentSave;
+                todo = await currentSave;
+            }
+
+            const persistedPriority = todo?.priority || nextPriority;
+
+            document.querySelectorAll(`.task-priority-value[data-todo-id="${todoId}"]`).forEach(function (priorityValue) {
+                priorityValue.dataset.persistedPriority = persistedPriority;
+            });
+
+            if (card) {
+                card.dataset.persistedPriority = persistedPriority;
+            }
+        } catch (error) {
+            const currentSequence = Number(card?.dataset.prioritySequence || priorityTrigger.dataset.prioritySequence || 0);
+
+            if (currentSequence === sequence) {
+                const persistedPriority = card?.dataset.persistedPriority || priorityTrigger.dataset.persistedPriority || previousPriority;
+                syncTaskPriorityControls(todoId, persistedPriority, true);
+                showToast(error.message);
+            }
+        }
     }
 
     async function updateTaskList(todoId, todoListId) {
@@ -3592,7 +3878,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     document.addEventListener('keydown', (event) => {
         const dialog = document.getElementById('task-workspace-container');
 
-        if (!dialog || !document.querySelector('.todo-shell.card-modal-open') || event.target.closest?.('.todo-modal-overlay')) {
+        if (!dialog || !document.querySelector('.todo-shell.card-modal-open') || event.target.closest?.('.todo-modal-overlay, #task-priority-popup')) {
             return;
         }
 
