@@ -1252,6 +1252,32 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 .form-textarea { resize: vertical; min-height: 72px; }
 .form-select { cursor: pointer; }
 
+.todo-color-help { display: block; margin: -1px 0 8px; color: var(--muted); font-size: 11px; }
+.todo-color-picker { display: grid; gap: 10px; }
+.todo-color-plane {
+    position: relative;
+    height: 148px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background-color: hsl(var(--picker-hue, 245) 100% 50%);
+    background-image: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, transparent);
+    cursor: crosshair;
+    touch-action: none;
+}
+.todo-color-plane:focus-visible { outline: 2px solid var(--todo-accent); outline-offset: 3px; }
+.todo-color-plane-cursor { position: absolute; top: 50%; left: 50%; width: 16px; height: 16px; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,.65), inset 0 0 0 1px rgba(0,0,0,.35); pointer-events: none; transform: translate(-50%, -50%); }
+.todo-color-hue-row { display: grid; grid-template-columns: 36px minmax(0, 1fr); align-items: center; gap: 10px; color: var(--muted); font-size: 11px; }
+.todo-color-hue { width: 100%; height: 14px; margin: 0; border: 1px solid var(--border); border-radius: 999px; appearance: none; background: linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); cursor: pointer; }
+.todo-color-hue::-webkit-slider-thumb { width: 18px; height: 18px; border: 2px solid #fff; border-radius: 50%; appearance: none; background: hsl(var(--picker-hue, 245) 100% 50%); box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+.todo-color-hue::-moz-range-thumb { width: 14px; height: 14px; border: 2px solid #fff; border-radius: 50%; background: hsl(var(--picker-hue, 245) 100% 50%); box-shadow: 0 1px 4px rgba(0,0,0,.35); }
+.todo-color-custom-row { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.todo-color-preview { width: 12px; height: 12px; flex: 0 0 12px; border-radius: 50%; background: var(--swatch-color); box-shadow: 0 0 0 2px var(--panel), 0 0 0 3px var(--border); }
+.todo-color-custom-label { color: var(--muted); font-size: 11px; }
+.todo-color-hex-input { width: 96px; height: 30px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 7px; color: var(--text); background: var(--panel-2); font: 11px 'JetBrains Mono', monospace; outline: none; transition: border-color var(--todo-transition), box-shadow var(--todo-transition); }
+.todo-color-hex-input:focus { border-color: var(--todo-accent); box-shadow: 0 0 0 3px var(--todo-accent-soft); }
+.todo-color-hex-input[aria-invalid="true"] { border-color: #ef4444; }
+
 .required-marker {
     margin-left: 6px;
     color: #dc2626;
@@ -1520,7 +1546,6 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                                     </button>
                                     <div class="project-menu" role="menu" aria-label="Project options for {{ $p->name }}" hidden>
                                         <button class="project-menu-item" type="button" role="menuitem" data-project-id="{{ $p->id }}" data-project-name="{{ $p->name }}" data-project-color="{{ $p->color }}" data-workspace-id="{{ $workspace->id }}" onclick="openEditProjectModal(this)">Edit project</button>
-                                        <button class="project-menu-item" type="button" role="menuitem" data-project-id="{{ $p->id }}" data-project-name="{{ $p->name }}" data-project-color="{{ $p->color }}" data-workspace-id="{{ $workspace->id }}" onclick="openEditProjectModal(this, true)">Move to workspace</button>
                                         <button class="project-menu-item danger" type="button" role="menuitem" data-project-id="{{ $p->id }}" data-project-name="{{ $p->name }}" data-project-card-count="{{ $p->todos_count }}" data-workspace-id="{{ $workspace->id }}" onclick="deleteTodoProject(this)">Delete project</button>
                                     </div>
                                 </div>
@@ -1848,8 +1873,23 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             <input type="text" id="project-name-input" class="form-input" placeholder="e.g. Codebook, API Client">
         </div>
         <div class="form-group">
-            <label class="form-label">Project Color</label>
-            <input type="color" id="project-color-input" value="#6366f1" style="height:34px;width:52px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:none;padding:3px;">
+            <span class="form-label">Project Color</span>
+            <input type="hidden" id="project-color-input" value="#6366f1">
+            <span class="todo-color-help">Drag the palette for any shade, or enter a HEX value.</span>
+            <div class="todo-color-picker">
+                <div class="todo-color-plane" id="project-color-plane" role="group" tabindex="0" aria-label="Project color saturation and brightness" aria-describedby="project-color-help" onpointerdown="startTodoColorPick(event, 'project')" onpointermove="moveTodoColorPick(event, 'project')" onkeydown="handleTodoColorPlaneKeydown(event, 'project')">
+                    <span class="todo-color-plane-cursor" aria-hidden="true"></span>
+                </div>
+                <label class="todo-color-hue-row" for="project-color-hue">Hue
+                    <input type="range" id="project-color-hue" class="todo-color-hue" min="0" max="359" step="1" value="245" aria-label="Project color hue" oninput="updateTodoColorHue('project', this.value)">
+                </label>
+            </div>
+            <span class="sr-only" id="project-color-help">Click or drag to adjust saturation and brightness. Use arrow keys while focused for precise adjustment.</span>
+            <div class="todo-color-custom-row">
+                <span class="todo-color-preview" id="project-color-preview" aria-hidden="true"></span>
+                <label class="todo-color-custom-label" for="project-color-custom">Custom HEX</label>
+                <input type="text" id="project-color-custom" class="todo-color-hex-input" value="#6366f1" maxlength="7" pattern="#[0-9A-Fa-f]{6}" inputmode="text" autocomplete="off" spellcheck="false" aria-label="Custom project color in HEX" oninput="updateTodoCustomColor('project', this)">
+            </div>
         </div>
         <div class="modal-footer">
             <button class="icon-btn" onclick="closeModals()">Cancel</button>
@@ -1867,8 +1907,23 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             <input type="text" id="list-name-input" class="form-input" maxlength="80" placeholder="e.g. Review, Backlog">
         </div>
         <div class="form-group">
-            <label class="form-label" for="list-color-input">List color</label>
-            <input type="color" id="list-color-input" value="#6366f1" style="height:34px;width:52px;border:1px solid var(--border);border-radius:6px;cursor:pointer;background:none;padding:3px;">
+            <span class="form-label">List color</span>
+            <input type="hidden" id="list-color-input" value="#6366f1">
+            <span class="todo-color-help">Drag the palette for any shade, or enter a HEX value.</span>
+            <div class="todo-color-picker">
+                <div class="todo-color-plane" id="list-color-plane" role="group" tabindex="0" aria-label="List color saturation and brightness" aria-describedby="list-color-help" onpointerdown="startTodoColorPick(event, 'list')" onpointermove="moveTodoColorPick(event, 'list')" onkeydown="handleTodoColorPlaneKeydown(event, 'list')">
+                    <span class="todo-color-plane-cursor" aria-hidden="true"></span>
+                </div>
+                <label class="todo-color-hue-row" for="list-color-hue">Hue
+                    <input type="range" id="list-color-hue" class="todo-color-hue" min="0" max="359" step="1" value="245" aria-label="List color hue" oninput="updateTodoColorHue('list', this.value)">
+                </label>
+            </div>
+            <span class="sr-only" id="list-color-help">Click or drag to adjust saturation and brightness. Use arrow keys while focused for precise adjustment.</span>
+            <div class="todo-color-custom-row">
+                <span class="todo-color-preview" id="list-color-preview" aria-hidden="true"></span>
+                <label class="todo-color-custom-label" for="list-color-custom">Custom HEX</label>
+                <input type="text" id="list-color-custom" class="todo-color-hex-input" value="#6366f1" maxlength="7" pattern="#[0-9A-Fa-f]{6}" inputmode="text" autocomplete="off" spellcheck="false" aria-label="Custom list color in HEX" oninput="updateTodoCustomColor('list', this)">
+            </div>
         </div>
         <div class="modal-footer">
             <button class="icon-btn" onclick="closeModals()">Cancel</button>
@@ -2629,6 +2684,181 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         document.getElementById('workspace-name-input').select();
     }
 
+    function todoHexToHsv(hex) {
+        const value = hex.slice(1);
+        const red = parseInt(value.slice(0, 2), 16) / 255;
+        const green = parseInt(value.slice(2, 4), 16) / 255;
+        const blue = parseInt(value.slice(4, 6), 16) / 255;
+        const maximum = Math.max(red, green, blue);
+        const minimum = Math.min(red, green, blue);
+        const delta = maximum - minimum;
+        let hue = 0;
+
+        if (delta !== 0) {
+            if (maximum === red) {
+                hue = 60 * (((green - blue) / delta) % 6);
+            } else if (maximum === green) {
+                hue = 60 * ((blue - red) / delta + 2);
+            } else {
+                hue = 60 * ((red - green) / delta + 4);
+            }
+        }
+
+        return {
+            hue: (hue + 360) % 360,
+            saturation: maximum === 0 ? 0 : (delta / maximum) * 100,
+            value: maximum * 100,
+        };
+    }
+
+    function todoHsvToHex(hue, saturation, value) {
+        const normalizedHue = ((hue % 360) + 360) % 360;
+        const normalizedSaturation = saturation / 100;
+        const normalizedValue = value / 100;
+        const chroma = normalizedValue * normalizedSaturation;
+        const secondary = chroma * (1 - Math.abs(((normalizedHue / 60) % 2) - 1));
+        const offset = normalizedValue - chroma;
+        let channels;
+
+        if (normalizedHue < 60) {
+            channels = [chroma, secondary, 0];
+        } else if (normalizedHue < 120) {
+            channels = [secondary, chroma, 0];
+        } else if (normalizedHue < 180) {
+            channels = [0, chroma, secondary];
+        } else if (normalizedHue < 240) {
+            channels = [0, secondary, chroma];
+        } else if (normalizedHue < 300) {
+            channels = [secondary, 0, chroma];
+        } else {
+            channels = [chroma, 0, secondary];
+        }
+
+        return `#${channels.map((channel) => Math.round((channel + offset) * 255).toString(16).padStart(2, '0')).join('')}`;
+    }
+
+    function setTodoColorPickerState(type, hue, saturation, value) {
+        const colorInput = document.getElementById(`${type}-color-input`);
+        const colorPlane = document.getElementById(`${type}-color-plane`);
+        const hueInput = document.getElementById(`${type}-color-hue`);
+        const colorPreview = document.getElementById(`${type}-color-preview`);
+        const customColorInput = document.getElementById(`${type}-color-custom`);
+
+        if (!colorInput || !colorPlane || !hueInput || !colorPreview || !customColorInput) {
+            return;
+        }
+
+        const normalizedHue = Math.round(((hue % 360) + 360) % 360);
+        const normalizedSaturation = Math.round(Math.max(0, Math.min(100, saturation)));
+        const normalizedValue = Math.round(Math.max(0, Math.min(100, value)));
+        const color = todoHsvToHex(normalizedHue, normalizedSaturation, normalizedValue);
+        const cursor = colorPlane.querySelector('.todo-color-plane-cursor');
+
+        colorPlane.dataset.hue = String(normalizedHue);
+        colorPlane.dataset.saturation = String(normalizedSaturation);
+        colorPlane.dataset.value = String(normalizedValue);
+        colorPlane.style.setProperty('--picker-hue', String(normalizedHue));
+        hueInput.style.setProperty('--picker-hue', String(normalizedHue));
+        hueInput.value = String(normalizedHue);
+        colorInput.value = color;
+        colorPreview.style.setProperty('--swatch-color', color);
+        customColorInput.value = color;
+        customColorInput.removeAttribute('aria-invalid');
+
+        if (cursor) {
+            cursor.style.left = `${normalizedSaturation}%`;
+            cursor.style.top = `${100 - normalizedValue}%`;
+        }
+    }
+
+    function syncTodoColorPicker(type, colorValue) {
+        const color = /^#[0-9a-f]{6}$/i.test(colorValue) ? colorValue : '#6366f1';
+        const hsv = todoHexToHsv(color);
+        setTodoColorPickerState(type, hsv.hue, hsv.saturation, hsv.value);
+    }
+
+    function updateTodoColorHue(type, hue) {
+        const colorPlane = document.getElementById(`${type}-color-plane`);
+        if (!colorPlane) {
+            return;
+        }
+
+        setTodoColorPickerState(
+            type,
+            Number(hue),
+            Number(colorPlane.dataset.saturation ?? 100),
+            Number(colorPlane.dataset.value ?? 100)
+        );
+    }
+
+    function updateTodoColorFromPointer(event, type) {
+        const colorPlane = document.getElementById(`${type}-color-plane`);
+        if (!colorPlane) {
+            return;
+        }
+
+        const bounds = colorPlane.getBoundingClientRect();
+        if (bounds.width === 0 || bounds.height === 0) {
+            return;
+        }
+
+        const saturation = ((event.clientX - bounds.left) / bounds.width) * 100;
+        const value = 100 - ((event.clientY - bounds.top) / bounds.height) * 100;
+        setTodoColorPickerState(type, Number(colorPlane.dataset.hue ?? 245), saturation, value);
+    }
+
+    function startTodoColorPick(event, type) {
+        if (event.button !== 0) {
+            return;
+        }
+
+        event.currentTarget.setPointerCapture(event.pointerId);
+        updateTodoColorFromPointer(event, type);
+    }
+
+    function moveTodoColorPick(event, type) {
+        if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+            updateTodoColorFromPointer(event, type);
+        }
+    }
+
+    function handleTodoColorPlaneKeydown(event, type) {
+        const colorPlane = document.getElementById(`${type}-color-plane`);
+        if (!colorPlane) {
+            return;
+        }
+
+        const step = event.shiftKey ? 5 : 1;
+        let saturation = Number(colorPlane.dataset.saturation ?? 100);
+        let value = Number(colorPlane.dataset.value ?? 100);
+
+        if (event.key === 'ArrowLeft') {
+            saturation -= step;
+        } else if (event.key === 'ArrowRight') {
+            saturation += step;
+        } else if (event.key === 'ArrowDown') {
+            value -= step;
+        } else if (event.key === 'ArrowUp') {
+            value += step;
+        } else {
+            return;
+        }
+
+        event.preventDefault();
+        setTodoColorPickerState(type, Number(colorPlane.dataset.hue ?? 245), saturation, value);
+    }
+
+    function updateTodoCustomColor(type, input) {
+        const color = input.value.trim();
+
+        if (!/^#[0-9a-f]{6}$/i.test(color)) {
+            input.setAttribute('aria-invalid', 'true');
+            return;
+        }
+
+        syncTodoColorPicker(type, color);
+    }
+
     function openNewProjectModal(workspaceId = currentWorkspaceId) {
         document.getElementById('project-modal-title').textContent = 'New Project';
         document.getElementById('project-id-input').value = '';
@@ -2637,13 +2867,13 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             wsSelect.value = String(workspaceId ?? currentWorkspaceId ?? wsSelect.options[0]?.value ?? '');
         }
         document.getElementById('project-name-input').value = '';
-        document.getElementById('project-color-input').value = '#6366f1';
+        syncTodoColorPicker('project', '#6366f1');
         document.getElementById('project-submit-button').textContent = 'Create Project';
         document.getElementById('modal-project').style.display = 'flex';
         document.getElementById('project-name-input').focus();
     }
 
-    function openEditProjectModal(button, focusWorkspace = false) {
+    function openEditProjectModal(button) {
         closeTodoProjectMenus();
         document.getElementById('project-modal-title').textContent = 'Edit Project';
         document.getElementById('project-id-input').value = button.dataset.projectId;
@@ -2652,15 +2882,11 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             wsSelect.value = String(button.dataset.workspaceId);
         }
         document.getElementById('project-name-input').value = button.dataset.projectName;
-        document.getElementById('project-color-input').value = button.dataset.projectColor;
+        syncTodoColorPicker('project', button.dataset.projectColor);
         document.getElementById('project-submit-button').textContent = 'Save changes';
         document.getElementById('modal-project').style.display = 'flex';
-        if (focusWorkspace && wsSelect) {
-            wsSelect.focus();
-        } else {
-            document.getElementById('project-name-input').focus();
-            document.getElementById('project-name-input').select();
-        }
+        document.getElementById('project-name-input').focus();
+        document.getElementById('project-name-input').select();
     }
 
     function toggleWorkspaceProjects(button, workspaceId) {
@@ -2671,6 +2897,8 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     }
 
     function openNewListModal() {
+        document.getElementById('list-name-input').value = '';
+        syncTodoColorPicker('list', '#6366f1');
         document.getElementById('modal-list').style.display = 'flex';
         document.getElementById('list-name-input').focus();
     }
@@ -2694,6 +2922,13 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
     async function submitNewProject() {
         const name = document.getElementById('project-name-input').value.trim();
+        const customColorInput = document.getElementById('project-color-custom');
+        if (!/^#[0-9a-f]{6}$/i.test(customColorInput.value.trim())) {
+            customColorInput.setAttribute('aria-invalid', 'true');
+            customColorInput.focus();
+            showToast('Warna project harus berupa HEX 6 digit.');
+            return;
+        }
         const color = document.getElementById('project-color-input').value;
         const workspace_id = Number(document.getElementById('project-workspace-id').value) || currentWorkspaceId;
         const projectId = Number(document.getElementById('project-id-input').value) || null;
@@ -2795,6 +3030,13 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
     async function submitNewList() {
         const name = document.getElementById('list-name-input').value.trim();
+        const customColorInput = document.getElementById('list-color-custom');
+        if (!/^#[0-9a-f]{6}$/i.test(customColorInput.value.trim())) {
+            customColorInput.setAttribute('aria-invalid', 'true');
+            customColorInput.focus();
+            showToast('Warna list harus berupa HEX 6 digit.');
+            return;
+        }
         const color = document.getElementById('list-color-input').value;
 
         if (!name) {
