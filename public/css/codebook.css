@@ -1737,6 +1737,37 @@ body.is-drag-active .root-dropzone {
 #send-btn:active {
   transform: translateY(0);
 }
+.auth-form #send-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+.auth-form #send-btn:disabled {
+  cursor: wait;
+  filter: none;
+  opacity: 0.82;
+  transform: none;
+}
+.auth-submit-spinner {
+  display: none;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 42 15;
+}
+.auth-form #send-btn[aria-busy="true"] .auth-submit-spinner {
+  display: block;
+  animation: spin 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .auth-form #send-btn[aria-busy="true"] .auth-submit-spinner {
+    animation-duration: 1.8s;
+  }
+}
 
 .hint {
   font-family: 'JetBrains Mono', monospace;

@@ -51,7 +51,12 @@
                 </div>
             </div>
 
-            <button type="submit" id="send-btn" style="margin-top:6px;">Masuk via SSO</button>
+            <button type="submit" id="send-btn" style="margin-top:6px;">
+                <span class="auth-submit-label">Masuk via SSO</span>
+                <svg class="auth-submit-spinner" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <circle cx="12" cy="12" r="9" />
+                </svg>
+            </button>
         </form>
 
         <div style="text-align:center;font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;">
@@ -77,6 +82,18 @@
             eyeIcon.style.display = 'block';
             eyeOffIcon.style.display = 'none';
         }
+    });
+
+    document.querySelector('.auth-form')?.addEventListener('submit', function () {
+        const submitButton = document.getElementById('send-btn');
+
+        if (!submitButton || submitButton.disabled) {
+            return;
+        }
+
+        submitButton.disabled = true;
+        submitButton.setAttribute('aria-busy', 'true');
+        submitButton.querySelector('.auth-submit-label').textContent = 'Sedang masuk…';
     });
 </script>
 @endsection
