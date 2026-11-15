@@ -749,6 +749,9 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     font: inherit;
     font-size: 12px;
     line-height: 1.6;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow-x: hidden;
     resize: vertical;
     outline: none;
 }
@@ -1058,6 +1061,9 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     font-size: 13px;
     line-height: 1.6;
     padding: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    overflow-x: hidden;
     resize: vertical;
     min-height: 68px;
     outline: none;
@@ -1137,7 +1143,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     color: var(--text-secondary);
     line-height: 1.65;
     white-space: pre-wrap;
-    word-break: break-word;
+    overflow-wrap: anywhere;
     margin: 0;
 }
 
@@ -1751,7 +1757,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                     </div>
 
                     <div class="thread-input-wrap">
-                        <textarea id="new-thread-input" class="thread-textarea" placeholder="Write a note, debug log, or code snippet..."></textarea>
+                        <textarea id="new-thread-input" class="thread-textarea" rows="3" wrap="soft" placeholder="Write a note, debug log, or code snippet..."></textarea>
                         <div class="thread-input-footer">
                             <span class="thread-input-hint">Stored securely &mdash; plain text.</span>
                             <button class="primary-btn" onclick="postThreadNote({{ $activeTodo->id }})" style="height:28px;padding:0 12px;font-size:11.5px;">
@@ -1779,7 +1785,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                                 </div>
                                 <p class="thread-content" id="thread-content-{{ $note->id }}">{{ $note->content }}</p>
                                 <div class="thread-edit-wrap" id="thread-edit-wrap-{{ $note->id }}" hidden>
-                                    <textarea class="thread-edit-textarea" id="thread-edit-input-{{ $note->id }}" aria-label="Edit comment" onkeydown="handleThreadNoteKeydown(event, {{ $note->id }})">{{ $note->content }}</textarea>
+                                    <textarea class="thread-edit-textarea" id="thread-edit-input-{{ $note->id }}" rows="4" wrap="soft" aria-label="Edit comment" onkeydown="handleThreadNoteKeydown(event, {{ $note->id }})">{{ $note->content }}</textarea>
                                     <div class="thread-edit-actions">
                                         <button class="icon-btn" type="button" onclick="cancelThreadNoteEdit({{ $note->id }})">Cancel</button>
                                         <button class="primary-btn" type="button" onclick="saveThreadNote({{ $note->id }})">Save</button>
