@@ -123,8 +123,8 @@
         <div id="thread">
             <div class="empty-state" id="no-note-state" style="{{ $activeNote ? 'display:none;' : '' }}">
                 <div class="glyph">&gt;_</div>
-                <p>Tidak ada catatan yang dipilih. Pilih catatan dari panel kiri atau buat catatan baru.</p>
-                <button class="icon-btn btn-primary" onclick="openNewNoteModal()" style="margin:16px auto 0;">&#43; Buat Catatan Pertama</button>
+                <p>Pilih catatan di sebelah kiri untuk melihat chat, atau buat catatan baru.</p>
+                <button class="icon-btn btn-primary" onclick="openNewNoteModal()" style="margin:16px auto 0;">&#43; Buat Catatan Baru</button>
             </div>
 
             <div class="empty-state" id="empty-state" style="{{ ($activeNote && $activeNote->messages->count() === 0) ? 'display:block;' : 'display:none;' }}">

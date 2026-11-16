@@ -67,14 +67,6 @@ class WorkspaceController extends Controller
                 ->find($activeNoteId);
         }
 
-        if (! $activeNote) {
-            // Pick most recent note if available
-            $activeNote = Note::where('user_id', $userId)
-                ->with('messages')
-                ->orderBy('updated_at', 'desc')
-                ->first();
-        }
-
         return view('workspace.index', compact('folders', 'flatFolderTree', 'rootNotes', 'activeNote'));
     }
 }
