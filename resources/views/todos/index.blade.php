@@ -213,8 +213,19 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 .todo-detail-shell .task-workspace-content { max-width: 900px; margin: 0 auto; }
 
 /* ---- Kanban Board ---- */
-.board-header { padding-inline: 20px; }
-.board-header .pane-header-title { font-size: 14px; }
+.board-header { padding-inline: 20px; gap: 12px; }
+.board-header .pane-header-title { min-width: 0; font-size: 14px; }
+.board-header .pane-header-subtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board-header-actions { display: flex; align-items: center; gap: 8px; }
+.board-sort-control { position: relative; }
+.board-sort-button { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 9px; border: 1px solid var(--border); border-radius: 7px; color: var(--text-secondary); background: var(--panel); font: inherit; font-size: 11px; cursor: pointer; }
+.board-sort-button:hover, .board-sort-button[aria-expanded="true"] { border-color: var(--border-hover); color: var(--text); background: var(--panel-hover); }
+.board-sort-current-label { color: var(--muted); }
+.board-sort-menu { position: absolute; top: calc(100% + 5px); right: 0; z-index: 40; min-width: 210px; padding: 5px; border: 1px solid var(--border); border-radius: 9px; background: var(--panel); box-shadow: 0 10px 28px rgba(0,0,0,.18); }
+.board-sort-menu[hidden] { display: none; }
+.board-sort-option { display: flex; align-items: center; width: 100%; min-height: 34px; padding: 0 9px; border: 0; border-radius: 6px; color: var(--text-secondary); background: transparent; font: inherit; font-size: 11.5px; text-align: left; cursor: pointer; }
+.board-sort-option:hover, .board-sort-option[aria-checked="true"] { color: var(--todo-accent); background: var(--todo-accent-soft); }
+.todo-shell.todo-sort-active .board-task-card { cursor: default; }
 .board-scroll {
     flex: 1;
     min-height: 0;
@@ -1480,7 +1491,10 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     .workspace-projects { padding-left: 8px; }
     .project-menu-toggle { opacity: 1; visibility: visible; }
     .pane-list { flex: 0 0 390px; width: 100%; border-right: none; }
-    .board-header { height: 48px; padding-inline: 14px; }
+    .board-header { height: auto; min-height: 48px; padding: 8px 14px; }
+    .board-header-actions { gap: 6px; }
+    .board-sort-current-label { display: none; }
+    .board-sort-menu { min-width: 190px; }
     .board-scroll { padding: 12px 14px 16px; }
     .board-column { width: min(82vw, 300px); min-width: min(82vw, 300px); height: 360px; max-height: 360px; }
     .pane-workspace { width: 100%; min-width: 0; min-height: 320px; border-top: 1px solid var(--border); }
@@ -1591,10 +1605,27 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                     <span class="pane-header-subtitle">/ {{ $currentProject->name }}</span>
                 @endif
             </span>
-            <button class="primary-btn" onclick="openNewListModal()" style="height:30px;padding:0 11px;font-size:11.5px;">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                Add list
-            </button>
+            <div class="board-header-actions">
+                <div class="board-sort-control">
+                    <button class="board-sort-button" id="todo-sort-button" type="button" aria-haspopup="menu" aria-expanded="false" onclick="toggleTodoSortMenu(event, this)">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M7 12h10m-7 6h4"/></svg>
+                        <span>Sort</span><span class="board-sort-current-label" id="todo-sort-current-label">Manual</span>
+                    </button>
+                    <div class="board-sort-menu" id="todo-sort-menu" role="menu" aria-label="Sort cards" hidden>
+                        <button class="board-sort-option" type="button" role="menuitemradio" data-sort="manual" aria-checked="true" onclick="setTodoCardSort(event, 'manual')">Manual order</button>
+                        <button class="board-sort-option" type="button" role="menuitemradio" data-sort="priority" aria-checked="false" onclick="setTodoCardSort(event, 'priority')">Priority (highest first)</button>
+                        <button class="board-sort-option" type="button" role="menuitemradio" data-sort="created_desc" aria-checked="false" onclick="setTodoCardSort(event, 'created_desc')">Created (newest first)</button>
+                        <button class="board-sort-option" type="button" role="menuitemradio" data-sort="created_asc" aria-checked="false" onclick="setTodoCardSort(event, 'created_asc')">Created (oldest first)</button>
+                        <button class="board-sort-option" type="button" role="menuitemradio" data-sort="updated_desc" aria-checked="false" onclick="setTodoCardSort(event, 'updated_desc')">Modified (newest first)</button>
+                        <button class="board-sort-option" type="button" role="menuitemradio" data-sort="updated_asc" aria-checked="false" onclick="setTodoCardSort(event, 'updated_asc')">Modified (oldest first)</button>
+                        <button class="board-sort-option" type="button" role="menuitemradio" data-sort="title_asc" aria-checked="false" onclick="setTodoCardSort(event, 'title_asc')">Title (A to Z)</button>
+                    </div>
+                </div>
+                <button class="primary-btn" onclick="openNewListModal()" style="height:30px;padding:0 11px;font-size:11.5px;">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add list
+                </button>
+            </div>
         </div>
 
         <div class="board-scroll" id="task-list-container">
@@ -1618,7 +1649,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                     </header>
                     <div class="board-column-cards">
                         @forelse($columnTodos as $t)
-                            <article class="task-card board-task-card {{ $t->status === 'done' ? 'done' : '' }} {{ $activeTodo?->id === $t->id ? 'active' : '' }}" id="task-card-{{ $t->id }}" data-project-id="{{ $t->todo_project_id }}" data-todo-id="{{ $t->id }}" data-list-id="{{ $column->id }}" data-status="{{ $t->status }}" data-persisted-list-id="{{ $column->id }}" data-persisted-status="{{ $t->status }}" data-priority="{{ $t->priority }}" data-persisted-priority="{{ $t->priority }}" draggable="true" ondragstart="startTodoDrag(event, {{ $t->id }})" ondragend="endTodoDrag(event)">
+                            <article class="task-card board-task-card {{ $t->status === 'done' ? 'done' : '' }} {{ $activeTodo?->id === $t->id ? 'active' : '' }}" id="task-card-{{ $t->id }}" data-project-id="{{ $t->todo_project_id }}" data-todo-id="{{ $t->id }}" data-list-id="{{ $column->id }}" data-status="{{ $t->status }}" data-persisted-list-id="{{ $column->id }}" data-persisted-status="{{ $t->status }}" data-priority="{{ $t->priority }}" data-persisted-priority="{{ $t->priority }}" data-created-at="{{ $t->created_at->timestamp }}" data-updated-at="{{ $t->updated_at->timestamp }}" draggable="true" ondragstart="startTodoDrag(event, {{ $t->id }})" ondragend="endTodoDrag(event)">
                                 <div class="task-checkbox-wrap">
                                     <input type="checkbox" class="task-checkbox" aria-label="Mark {{ $t->title }} done" {{ $t->status === 'done' ? 'checked' : '' }} onclick="event.stopPropagation(); toggleTaskDone({{ $t->id }}, this.checked)">
                                 </div>
@@ -2084,6 +2115,8 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     let activeTodoId = {{ $activeTodo ? $activeTodo->id : 'null' }};
     let currentProjectId = @json($currentProjectId ? (int) $currentProjectId : null);
     let currentWorkspaceId = @json((int) $currentWorkspaceId);
+    const todoCardSortStoragePrefix = 'todos:card-sort:' + @json((string) auth()->user()->user_id) + ':';
+    let todoCardSort = 'manual';
     const newTodoDraftStorageKey = 'todos:new-card-draft:' + @json((string) auth()->user()->user_id) + ':' + (currentProjectId ?? 'none');
     const currentTodoStatusFilter = @json(request()->filled('status') ? request('status') : null);
     const todoSystemListIds = @json($todoLists->whereNotNull('system_status')->pluck('id', 'system_status'));
@@ -2357,6 +2390,119 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         }
     }
 
+    function todoCardSortStorageKey() {
+        return `${todoCardSortStoragePrefix}${currentProjectId ?? 'none'}`;
+    }
+
+    function loadTodoCardSort() {
+        const validSortModes = ['manual', 'priority', 'created_desc', 'created_asc', 'updated_desc', 'updated_asc', 'title_asc'];
+
+        try {
+            const savedSort = window.localStorage.getItem(todoCardSortStorageKey());
+
+            return validSortModes.includes(savedSort) ? savedSort : 'manual';
+        } catch (error) {
+            return 'manual';
+        }
+    }
+
+    function toggleTodoSortMenu(event, button) {
+        event.stopPropagation();
+        closeTodoListMenus();
+        closeTodoProjectMenus();
+
+        const shouldOpen = button.getAttribute('aria-expanded') !== 'true';
+        closeTodoSortMenu();
+
+        if (shouldOpen) {
+            button.setAttribute('aria-expanded', 'true');
+            document.getElementById('todo-sort-menu').hidden = false;
+        }
+    }
+
+    function closeTodoSortMenu() {
+        const button = document.getElementById('todo-sort-button');
+        const menu = document.getElementById('todo-sort-menu');
+
+        if (button && menu) {
+            button.setAttribute('aria-expanded', 'false');
+            menu.hidden = true;
+        }
+    }
+
+    function setTodoCardSort(event, sortMode) {
+        event.stopPropagation();
+        todoCardSort = sortMode;
+
+        try {
+            window.localStorage.setItem(todoCardSortStorageKey(), sortMode);
+        } catch (error) {
+            // Sorting still works for this page when browser storage is unavailable.
+        }
+
+        closeTodoSortMenu();
+        applyTodoCardSort();
+    }
+
+    function applyTodoCardSort() {
+        const sortLabels = {
+            manual: 'Manual',
+            priority: 'Priority',
+            created_desc: 'Created: newest',
+            created_asc: 'Created: oldest',
+            updated_desc: 'Modified: newest',
+            updated_asc: 'Modified: oldest',
+            title_asc: 'Title: A to Z',
+        };
+        const shell = document.querySelector('.todo-shell');
+        const isManualOrder = todoCardSort === 'manual';
+        const priorityRank = { urgent: 0, high: 1, medium: 2, low: 3 };
+
+        shell?.classList.toggle('todo-sort-active', !isManualOrder);
+
+        document.querySelectorAll('.board-column-cards').forEach((cardsContainer) => {
+            const cards = [...cardsContainer.querySelectorAll('.board-task-card')];
+            let sortedCards = cards;
+
+            if (todoCardSort === 'priority') {
+                sortedCards = [...cards].sort((first, second) => (priorityRank[first.dataset.priority] ?? 4) - (priorityRank[second.dataset.priority] ?? 4));
+            } else if (todoCardSort === 'created_desc' || todoCardSort === 'created_asc') {
+                const direction = todoCardSort === 'created_desc' ? -1 : 1;
+                sortedCards = [...cards].sort((first, second) => (Number(first.dataset.createdAt) - Number(second.dataset.createdAt)) * direction);
+            } else if (todoCardSort === 'updated_desc' || todoCardSort === 'updated_asc') {
+                const direction = todoCardSort === 'updated_desc' ? -1 : 1;
+                sortedCards = [...cards].sort((first, second) => (Number(first.dataset.updatedAt) - Number(second.dataset.updatedAt)) * direction);
+            } else if (todoCardSort === 'title_asc') {
+                sortedCards = [...cards].sort((first, second) => {
+                    const firstTitle = first.querySelector('.task-title-label')?.textContent.trim() || '';
+                    const secondTitle = second.querySelector('.task-title-label')?.textContent.trim() || '';
+
+                    return firstTitle.localeCompare(secondTitle, undefined, { sensitivity: 'base', numeric: true });
+                });
+            }
+
+            cards.forEach((card) => {
+                card.draggable = isManualOrder;
+                card.style.order = '';
+            });
+
+            if (!isManualOrder) {
+                sortedCards.forEach((card, index) => {
+                    card.style.order = String(index);
+                });
+            }
+        });
+
+        const currentLabel = document.getElementById('todo-sort-current-label');
+        if (currentLabel) {
+            currentLabel.textContent = sortLabels[todoCardSort] || sortLabels.manual;
+        }
+
+        document.querySelectorAll('.board-sort-option[data-sort]').forEach((option) => {
+            option.setAttribute('aria-checked', String(option.dataset.sort === todoCardSort));
+        });
+    }
+
     let todoSessionReloading = false;
     const todoLoginPath = new URL("{{ route('login') }}", window.location.origin).pathname;
 
@@ -2612,6 +2758,8 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             bindTodoDescEditor();
             formatThreadEntryTimes(nextShell);
             formatTodoTimestampDetails(nextShell);
+            todoCardSort = loadTodoCardSort();
+            applyTodoCardSort();
 
             if (openingCardModal) {
                 document.getElementById('close-task-modal')?.focus();
@@ -3601,6 +3749,8 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         if (card && isPersisted) {
             card.dataset.persistedPriority = priority;
         }
+
+        applyTodoCardSort();
     }
 
     async function updateTaskPriority(priorityTrigger, nextPriority) {
@@ -3730,6 +3880,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
         title.textContent = nextTitle;
         taskCardTitle?.replaceChildren(document.createTextNode(nextTitle));
+        applyTodoCardSort();
         cancelTaskTitleEdit();
 
         try {
@@ -3746,6 +3897,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             }
 
             taskCardTitle?.replaceChildren(document.createTextNode(data.todo.title));
+            applyTodoCardSort();
         } catch (error) {
             if (activeTodoId === todoId) {
                 title.textContent = previousTitle;
@@ -3753,6 +3905,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             }
 
             taskCardTitle?.replaceChildren(document.createTextNode(previousTitle));
+            applyTodoCardSort();
             showToast(error.message);
         }
     }
@@ -3794,19 +3947,33 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     }
 
     function updateTodoModifiedTimestamp(todo) {
-        if (!todo || Number(todo.id) !== Number(activeTodoId) || !todo.updated_at) {
+        if (!todo || !todo.updated_at) {
             return;
         }
 
-        const modifiedTime = document.getElementById('ws-task-modified-time');
         const timestamp = new Date(todo.updated_at);
 
-        if (!modifiedTime || Number.isNaN(timestamp.getTime())) {
+        if (Number.isNaN(timestamp.getTime())) {
             return;
         }
 
-        modifiedTime.dateTime = timestamp.toISOString();
-        modifiedTime.textContent = todoTimestampFormatter.format(timestamp);
+        const card = document.getElementById(`task-card-${todo.id}`);
+        if (card) {
+            card.dataset.updatedAt = String(Math.floor(timestamp.getTime() / 1000));
+        }
+
+        if (Number(todo.id) === Number(activeTodoId)) {
+            const modifiedTime = document.getElementById('ws-task-modified-time');
+
+            if (modifiedTime) {
+                modifiedTime.dateTime = timestamp.toISOString();
+                modifiedTime.textContent = todoTimestampFormatter.format(timestamp);
+            }
+        }
+
+        if (todoCardSort === 'updated_desc' || todoCardSort === 'updated_asc') {
+            applyTodoCardSort();
+        }
     }
 
     function bindTodoTitleEditor() {
@@ -3941,6 +4108,8 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     bindTodoDescEditor();
     formatThreadEntryTimes();
     formatTodoTimestampDetails();
+    todoCardSort = loadTodoCardSort();
+    applyTodoCardSort();
 
     function saveNewTodoDraft(draft) {
         try {
@@ -4216,6 +4385,10 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     });
 
     document.addEventListener('click', (event) => {
+        if (!event.target.closest('.board-sort-control')) {
+            closeTodoSortMenu();
+        }
+
         if (!event.target.closest('.board-column-menu')) {
             closeTodoListMenus();
         }
