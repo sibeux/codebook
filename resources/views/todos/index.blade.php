@@ -813,6 +813,21 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     flex-wrap: wrap;
 }
 
+.ws-card-timestamps {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    margin-top: 14px;
+    padding-top: 11px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    line-height: 1.5;
+}
+
+.ws-card-timestamp { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.ws-card-timestamp-label { color: var(--muted); }
+.ws-card-timestamp time { color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+
 .ws-task-title {
     font-size: clamp(18px, 2.5vw, 24px);
     font-weight: 700;
@@ -1722,6 +1737,16 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                                     Delete
                                 </button>
                             </div>
+                            <div class="ws-card-timestamps" aria-label="Card timestamps">
+                                <span class="ws-card-timestamp">
+                                    <span class="ws-card-timestamp-label">Created</span>
+                                    <time class="todo-local-timestamp" datetime="{{ $activeTodo->created_at->toIso8601String() }}">{{ $activeTodo->created_at->format('d M Y, H:i') }}</time>
+                                </span>
+                                <span class="ws-card-timestamp">
+                                    <span class="ws-card-timestamp-label">Modified</span>
+                                    <time class="todo-local-timestamp" id="ws-task-modified-time" datetime="{{ $activeTodo->updated_at->toIso8601String() }}">{{ $activeTodo->updated_at->format('d M Y, H:i') }}</time>
+                                </span>
+                            </div>
                         </div>
 
                         <section class="ws-section task-description-section">
@@ -2583,6 +2608,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             bindTodoTitleEditor();
             bindTodoDescEditor();
             formatThreadEntryTimes(nextShell);
+            formatTodoTimestampDetails(nextShell);
 
             if (openingCardModal) {
                 document.getElementById('close-task-modal')?.focus();
@@ -3523,6 +3549,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                 throw new Error(message);
             }
 
+            updateTodoModifiedTimestamp(payload.todo);
             card.dataset.persistedStatus = payload.todo?.status || card.dataset.persistedStatus;
 
             if (payload.todo && Object.prototype.hasOwnProperty.call(payload.todo, 'todo_list_id')) {
@@ -3615,6 +3642,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
             }
 
             const persistedPriority = todo?.priority || nextPriority;
+            updateTodoModifiedTimestamp(todo);
 
             document.querySelectorAll(`.task-priority-value[data-todo-id="${todoId}"]`).forEach(function (priorityValue) {
                 priorityValue.dataset.persistedPriority = persistedPriority;
@@ -3708,6 +3736,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                 body: JSON.stringify({ title: nextTitle })
             }, { showProgress: false });
             const data = await response.json();
+            updateTodoModifiedTimestamp(data.todo);
 
             if (activeTodoId === todoId) {
                 title.textContent = data.todo.title;
@@ -3741,6 +3770,40 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                 timeElement.textContent = formatter.format(timestamp);
             }
         });
+    }
+
+    const todoTimestampFormatter = new Intl.DateTimeFormat(undefined, {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    });
+
+    function formatTodoTimestampDetails(container = document) {
+        container.querySelectorAll('.todo-local-timestamp[datetime]').forEach((timeElement) => {
+            const timestamp = new Date(timeElement.dateTime);
+
+            if (!Number.isNaN(timestamp.getTime())) {
+                timeElement.textContent = todoTimestampFormatter.format(timestamp);
+            }
+        });
+    }
+
+    function updateTodoModifiedTimestamp(todo) {
+        if (!todo || Number(todo.id) !== Number(activeTodoId) || !todo.updated_at) {
+            return;
+        }
+
+        const modifiedTime = document.getElementById('ws-task-modified-time');
+        const timestamp = new Date(todo.updated_at);
+
+        if (!modifiedTime || Number.isNaN(timestamp.getTime())) {
+            return;
+        }
+
+        modifiedTime.dateTime = timestamp.toISOString();
+        modifiedTime.textContent = todoTimestampFormatter.format(timestamp);
     }
 
     function bindTodoTitleEditor() {
@@ -3827,6 +3890,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                 body: JSON.stringify({ description: nextDesc })
             }, { showProgress: false });
             const data = await response.json();
+            updateTodoModifiedTimestamp(data.todo);
 
             if (activeTodoId === todoId) {
                 const finalDesc = data.todo.description ? data.todo.description.trim() : '';
@@ -3873,6 +3937,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     bindTodoTitleEditor();
     bindTodoDescEditor();
     formatThreadEntryTimes();
+    formatTodoTimestampDetails();
 
     function saveNewTodoDraft(draft) {
         try {
