@@ -1453,6 +1453,9 @@ body.is-drag-active .root-dropzone {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+.message-edit-mode-toggle {
+  align-self: flex-end;
+}
 .sender-toggle.mini {
   width: auto;
   border-radius: 7px;
@@ -1489,6 +1492,20 @@ body.is-drag-active .root-dropzone {
 .message-edit-textarea:focus {
   border-color: var(--me);
   box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.2);
+}
+.message-edit-textarea[hidden],
+.message-edit-preview[hidden] {
+  display: none;
+}
+.message-edit-preview {
+  min-height: 84px;
+  max-height: 50vh;
+  overflow: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--border-hover);
+  border-radius: 8px;
+  background: var(--panel-2);
+  box-sizing: border-box;
 }
 .message-edit-footer {
   display: flex;
@@ -1706,7 +1723,8 @@ body.is-drag-active .root-dropzone {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
 }
 
-#msg-input {
+#msg-input,
+.message-preview {
   resize: none;
   background: var(--panel-2);
   border: 1px solid var(--border);
@@ -1726,6 +1744,61 @@ body.is-drag-active .root-dropzone {
 #msg-input:focus {
   border-color: var(--me);
   box-shadow: 0 0 0 3px var(--focus-ring);
+}
+.message-editor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.message-mode-toggle {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--panel-2);
+}
+.message-mode-toggle button {
+  border: 0;
+  border-radius: 5px;
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--muted);
+  font: 500 11px 'Inter', sans-serif;
+  cursor: pointer;
+}
+.message-mode-toggle button.active {
+  background: var(--panel);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+}
+.message-preview[hidden] {
+  display: none;
+}
+.message-preview {
+  overflow: auto;
+  padding: 12px;
+  display: flex;
+  align-items: flex-start;
+}
+.message-preview .row {
+  width: 100%;
+}
+.message-preview .bubble-wrap {
+  max-width: 100%;
+}
+.message-preview .bubble {
+  padding: 11px 12px;
+}
+.message-preview .meta {
+  font-size: 10px;
+}
+.message-preview-placeholder {
+  margin: auto;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
 }
 
 #send-btn {

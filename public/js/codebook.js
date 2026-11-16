@@ -150,6 +150,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const noNoteState = document.getElementById('no-note-state');
     const composer = document.getElementById('composer');
     const input = document.getElementById('msg-input');
+    const messagePreview = document.getElementById('message-preview');
+    const messageModeButtons = document.querySelectorAll('[data-message-mode]');
     const sendBtn = document.getElementById('send-btn');
     const noteTitleInput = document.getElementById('note-title-input');
     const senderButtons = document.querySelectorAll('.sender-toggle button');
@@ -185,6 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     let currentSender = 'me';
+    let isMessagePreviewVisible = false;
     let messages = window.INITIAL_MESSAGES || [];
     let titleDebounceTimeout = null;
     let originalNoteTitle = noteTitleInput ? noteTitleInput.value : '';
@@ -286,8 +289,85 @@ document.addEventListener('DOMContentLoaded', function () {
             senderButtons.forEach(function (b) { b.classList.remove('active'); });
             btn.classList.add('active');
             currentSender = btn.getAttribute('data-sender');
+            renderMessagePreview();
         });
     });
+
+    function renderMessagePreview() {
+        if (!messagePreview || !isMessagePreviewVisible) return;
+
+        const content = input ? input.value : '';
+        messagePreview.replaceChildren();
+
+        if (!content.trim()) {
+            const placeholder = document.createElement('p');
+            placeholder.className = 'message-preview-placeholder';
+            placeholder.textContent = 'Draft chat akan tampil di sini.';
+            messagePreview.appendChild(placeholder);
+            return;
+        }
+
+        const row = document.createElement('div');
+        row.className = `row ${currentSender}`;
+
+        const bubbleWrap = document.createElement('div');
+        bubbleWrap.className = 'bubble-wrap';
+
+        const meta = document.createElement('div');
+        meta.className = 'meta';
+
+        const senderLabel = document.createElement('span');
+        senderLabel.className = 'who';
+        senderLabel.textContent = currentSender === 'me' ? 'Me' : 'Other';
+        meta.appendChild(senderLabel);
+
+        const previewLabel = document.createElement('span');
+        previewLabel.textContent = 'Preview';
+        meta.appendChild(previewLabel);
+
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+
+        const markdown = document.createElement('div');
+        markdown.className = 'md';
+        if (window.marked && window.DOMPurify) {
+            const rawHtml = marked.parse(content);
+            markdown.innerHTML = DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['target', 'rel'] });
+        } else {
+            markdown.textContent = content;
+        }
+
+        bubble.appendChild(markdown);
+        bubbleWrap.appendChild(meta);
+        bubbleWrap.appendChild(bubble);
+        row.appendChild(bubbleWrap);
+        messagePreview.appendChild(row);
+
+        markdown.querySelectorAll('pre code').forEach(function (block) {
+            if (window.hljs) hljs.highlightElement(block);
+        });
+        setupCodeBlocks(markdown);
+        setupLinks(markdown);
+    }
+
+    messageModeButtons.forEach(function (button) {
+        button.addEventListener('click', function () {
+            isMessagePreviewVisible = button.getAttribute('data-message-mode') === 'preview';
+            messageModeButtons.forEach(function (modeButton) {
+                const isActive = modeButton === button;
+                modeButton.classList.toggle('active', isActive);
+                modeButton.setAttribute('aria-pressed', String(isActive));
+            });
+
+            if (input) input.hidden = isMessagePreviewVisible;
+            if (messagePreview) messagePreview.hidden = !isMessagePreviewVisible;
+            renderMessagePreview();
+        });
+    });
+
+    if (input) {
+        input.addEventListener('input', renderMessagePreview);
+    }
 
     // Theme toggle
     if (themeBtn && !themeBtn.dataset.themeBound) {
@@ -452,6 +532,7 @@ document.addEventListener('DOMContentLoaded', function () {
             if (data.success && data.message) {
                 messages.push(data.message);
                 input.value = '';
+                renderMessagePreview();
                 renderAll();
                 thread.scrollTop = thread.scrollHeight;
             }
@@ -743,6 +824,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     if (whoEl) whoEl.textContent = 'Other';
                 }
             }
+            renderEditPreview();
         }
 
         meBtn.addEventListener('click', function (e) {
@@ -768,6 +850,66 @@ document.addEventListener('DOMContentLoaded', function () {
         textarea.placeholder = 'Tulis pesan markdown di sini...';
         textarea.setAttribute('autofocus', '');
         textarea.setAttribute('tabindex', '0');
+
+        const editModeToggle = document.createElement('div');
+        editModeToggle.className = 'message-mode-toggle message-edit-mode-toggle';
+        editModeToggle.setAttribute('role', 'group');
+        editModeToggle.setAttribute('aria-label', 'Mode edit pesan');
+
+        const writeModeBtn = document.createElement('button');
+        writeModeBtn.type = 'button';
+        writeModeBtn.className = 'active';
+        writeModeBtn.textContent = 'Tulis';
+        writeModeBtn.setAttribute('aria-pressed', 'true');
+
+        const previewModeBtn = document.createElement('button');
+        previewModeBtn.type = 'button';
+        previewModeBtn.textContent = 'Preview';
+        previewModeBtn.setAttribute('aria-pressed', 'false');
+
+        editModeToggle.appendChild(writeModeBtn);
+        editModeToggle.appendChild(previewModeBtn);
+
+        const editPreview = document.createElement('div');
+        editPreview.className = 'message-edit-preview md';
+        editPreview.setAttribute('aria-label', 'Preview pesan');
+        editPreview.setAttribute('aria-live', 'polite');
+        editPreview.hidden = true;
+
+        function renderEditPreview() {
+            if (editPreview.hidden) return;
+
+            if (window.marked && window.DOMPurify) {
+                const rawHtml = marked.parse(textarea.value);
+                editPreview.innerHTML = DOMPurify.sanitize(rawHtml, { ADD_ATTR: ['target', 'rel'] });
+            } else {
+                editPreview.textContent = textarea.value;
+            }
+
+            editPreview.querySelectorAll('pre code').forEach(function (block) {
+                if (window.hljs) hljs.highlightElement(block);
+            });
+            setupCodeBlocks(editPreview);
+            setupLinks(editPreview);
+        }
+
+        function setEditMode(isPreview) {
+            textarea.hidden = isPreview;
+            editPreview.hidden = !isPreview;
+            writeModeBtn.classList.toggle('active', !isPreview);
+            previewModeBtn.classList.toggle('active', isPreview);
+            writeModeBtn.setAttribute('aria-pressed', String(!isPreview));
+            previewModeBtn.setAttribute('aria-pressed', String(isPreview));
+            renderEditPreview();
+        }
+
+        writeModeBtn.addEventListener('click', function () {
+            setEditMode(false);
+        });
+
+        previewModeBtn.addEventListener('click', function () {
+            setEditMode(true);
+        });
 
         const footer = document.createElement('div');
         footer.className = 'message-edit-footer';
@@ -796,7 +938,9 @@ document.addEventListener('DOMContentLoaded', function () {
         footer.appendChild(actions);
 
         editBox.appendChild(header);
+        editBox.appendChild(editModeToggle);
         editBox.appendChild(textarea);
+        editBox.appendChild(editPreview);
         editBox.appendChild(footer);
 
         // Clear any window text selection from click/dblclick
@@ -879,7 +1023,10 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         adjustEditHeight();
-        textarea.addEventListener('input', adjustEditHeight);
+        textarea.addEventListener('input', function () {
+            adjustEditHeight();
+            renderEditPreview();
+        });
         textarea.addEventListener('keyup', function (e) {
             if (e.key === 'Enter' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                 ensureCursorVisible();
@@ -969,12 +1116,16 @@ document.addEventListener('DOMContentLoaded', function () {
             saveEdit();
         });
 
-        textarea.addEventListener('keydown', function (e) {
+        editBox.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
                 e.preventDefault();
                 e.stopPropagation();
                 cancelEdit();
-            } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            }
+        });
+
+        textarea.addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                 e.preventDefault();
                 e.stopPropagation();
                 saveEdit();

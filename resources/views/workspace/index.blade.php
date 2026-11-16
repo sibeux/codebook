@@ -165,8 +165,15 @@
         </div>
 
         <div class="panel-block" style="flex:1;min-height:0;">
-            <div class="panel-label">Pesan Markdown</div>
+            <div class="message-editor-heading">
+                <div class="panel-label">Pesan Markdown</div>
+                <div class="message-mode-toggle" role="group" aria-label="Mode editor pesan">
+                    <button type="button" class="active" data-message-mode="write" aria-pressed="true">Tulis</button>
+                    <button type="button" data-message-mode="preview" aria-pressed="false">Preview</button>
+                </div>
+            </div>
             <textarea id="msg-input" placeholder="Tulis markdown di sini... (# heading, **bold**, - list, ```kode```, dsb)"></textarea>
+            <div id="message-preview" class="message-preview" aria-label="Preview chat" aria-live="polite" hidden></div>
             <button id="send-btn">Kirim</button>
             <div class="hint">Ctrl / Cmd + Enter untuk kirim &middot; Auto-saved ke database &middot; Format Markdown penuh</div>
         </div>
