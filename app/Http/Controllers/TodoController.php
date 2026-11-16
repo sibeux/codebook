@@ -256,6 +256,28 @@ class TodoController extends Controller
         return response()->json(['success' => true, 'workspace' => $workspace->fresh()]);
     }
 
+    public function deleteWorkspace(Request $request, TodoWorkspace $workspace): JsonResponse
+    {
+        abort_unless($workspace->user_id === $request->user()->user_id, 403);
+
+        DB::transaction(function () use ($workspace): void {
+            $lockedWorkspace = TodoWorkspace::query()
+                ->lockForUpdate()
+                ->findOrFail($workspace->getKey());
+
+            abort_if($lockedWorkspace->is_default, 422, 'The default workspace cannot be deleted.');
+            abort_if(
+                $lockedWorkspace->projects()->exists(),
+                422,
+                'Move or delete every project in this workspace before deleting it.',
+            );
+
+            $lockedWorkspace->delete();
+        });
+
+        return response()->json(['success' => true]);
+    }
+
     public function deleteProject(Request $request, TodoProject $project): JsonResponse
     {
         abort_unless($project->user_id === $request->user()->user_id, 403);

@@ -1561,6 +1561,9 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                             </button>
                             <div class="project-menu" role="menu" aria-label="Workspace options for {{ $workspace->name }}" hidden>
                                 <button class="project-menu-item" type="button" role="menuitem" data-workspace-id="{{ $workspace->id }}" data-workspace-name="{{ $workspace->name }}" onclick="openEditWorkspaceModal(this)">Rename workspace</button>
+                                @unless($workspace->is_default)
+                                    <button class="project-menu-item danger" type="button" role="menuitem" data-workspace-id="{{ $workspace->id }}" data-workspace-name="{{ $workspace->name }}" data-workspace-project-count="{{ $workspace->projects->count() }}" onclick="deleteTodoWorkspace(this)">Delete workspace</button>
+                                @endunless
                             </div>
                         </div>
                         <button class="workspace-toggle" type="button" aria-label="Show projects in {{ $workspace->name }}" aria-expanded="{{ $currentWorkspaceId === $workspace->id ? 'true' : 'false' }}" onclick="toggleWorkspaceProjects(this, {{ $workspace->id }})"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg></button>
@@ -3077,6 +3080,44 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         const expanded = button.getAttribute('aria-expanded') === 'true';
         button.setAttribute('aria-expanded', String(!expanded));
         projects.hidden = expanded;
+    }
+
+    async function deleteTodoWorkspace(button) {
+        const workspaceId = Number(button.dataset.workspaceId);
+        const workspaceName = button.dataset.workspaceName;
+        closeTodoProjectMenus(true);
+
+        if (Number(button.dataset.workspaceProjectCount) > 0) {
+            showToast(`Pindahkan atau hapus semua proyek di workspace "${workspaceName}" sebelum menghapusnya.`);
+            return;
+        }
+
+        const confirmed = await confirmTodoAction({
+            title: 'Hapus workspace?',
+            message: `Workspace "${workspaceName}" kosong dan akan dihapus.`,
+            confirmLabel: 'Hapus workspace',
+        });
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            await todoRequest(`/todos/workspaces/${workspaceId}`, {
+                method: 'DELETE',
+                headers: { 'X-CSRF-TOKEN': csrfToken },
+            });
+
+            if (currentWorkspaceId === workspaceId) {
+                await refreshTodoShell("{{ route('todos.index') }}", { pushState: true });
+            } else {
+                await refreshTodoShell();
+            }
+
+            showToast(`Workspace "${workspaceName}" berhasil dihapus.`);
+        } catch (error) {
+            showToast(error.message);
+        }
     }
 
     function openNewListModal() {
