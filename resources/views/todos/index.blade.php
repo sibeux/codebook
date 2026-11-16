@@ -281,7 +281,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 .board-task-card:active { cursor: grabbing; }
 .board-task-card.active { border-color: var(--todo-accent-muted); box-shadow: 0 0 0 2px var(--todo-accent-soft); background: var(--panel); }
 .board-task-card .task-card-link { min-height: 100%; }
-.board-task-card .task-title-text { font-size: 12px; line-height: 1.45; white-space: normal; overflow: visible; overflow-wrap: anywhere; text-overflow: clip; }
+.board-task-card .task-title-text { font-size: 12px; line-height: 1.45; white-space: pre-line; overflow: visible; overflow-wrap: anywhere; text-overflow: clip; }
 .board-task-card .task-card-meta { margin-top: 9px; gap: 6px; flex-wrap: wrap; }
 .board-task-card .task-checkbox { width: 15px; height: 15px; }
 
@@ -522,7 +522,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 .task-title-text {
     font-size: 13px;
     font-weight: 500;
-    white-space: nowrap;
+    white-space: pre-line;
     overflow: hidden;
     text-overflow: ellipsis;
     color: var(--text);
@@ -818,6 +818,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     font-weight: 700;
     color: var(--text);
     margin: 0 0 4px;
+    white-space: pre-line;
     letter-spacing: -.03em;
     line-height: 1.25;
 }
@@ -892,6 +893,9 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     font-weight: 700;
     letter-spacing: -.02em;
     padding: 8px 12px;
+    line-height: 1.35;
+    min-height: 68px;
+    resize: vertical;
     outline: none;
     box-shadow: 0 0 0 3px var(--todo-accent-soft);
     box-sizing: border-box;
@@ -1705,7 +1709,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
                                     {{-- Title editor --}}
                                     <div class="ws-title-edit-wrap" id="ws-task-title-editor">
-                                        <input type="text" id="ws-task-title-input" class="ws-title-input" value="{{ $activeTodo->title }}" maxlength="255" aria-label="Task title">
+                                        <textarea id="ws-task-title-input" class="ws-title-input" rows="2" maxlength="255" aria-label="Task title">{{ $activeTodo->title }}</textarea>
                                         <div class="ws-title-edit-actions">
                                             <button type="button" class="primary-btn" onclick="saveTaskTitle()" style="font-size:11.5px;height:28px;padding:0 12px;">Save</button>
                                             <button type="button" class="icon-btn" onclick="cancelTaskTitleEdit()" style="font-size:11.5px;height:28px;">Cancel</button>
@@ -3741,7 +3745,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 
     function bindTodoTitleEditor() {
         document.getElementById('ws-task-title-input')?.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter') {
+            if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
                 event.preventDefault();
                 saveTaskTitle();
             }
