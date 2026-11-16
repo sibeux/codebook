@@ -281,6 +281,9 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 .board-task-card:active { cursor: grabbing; }
 .board-task-card.active { border-color: var(--todo-accent-muted); box-shadow: 0 0 0 2px var(--todo-accent-soft); background: var(--panel); }
 .board-task-card .task-card-link { min-height: 100%; }
+.board-task-card .task-card-link::after { content: ''; position: absolute; inset: 0; z-index: 1; border-radius: 9px; }
+.board-task-card .task-card-link:focus-visible::after { outline: 2px solid var(--todo-accent); outline-offset: 2px; }
+.board-task-card .task-checkbox-wrap { position: relative; z-index: 2; }
 .board-task-card .task-title-text { font-size: 12px; line-height: 1.45; white-space: pre-line; overflow: visible; overflow-wrap: anywhere; text-overflow: clip; }
 .board-task-card .task-card-meta { margin-top: 9px; gap: 6px; flex-wrap: wrap; }
 .board-task-card .task-checkbox { width: 15px; height: 15px; }
