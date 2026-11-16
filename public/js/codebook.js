@@ -1,3 +1,21 @@
+const nativeCodebookFetch = window.fetch.bind(window);
+
+async function codebookFetch(...args) {
+    const response = await nativeCodebookFetch(...args);
+
+    if (response.redirected) {
+        const destination = new URL(response.url, window.location.href);
+        const loginPath = new URL('/login', window.location.origin).pathname;
+
+        if (destination.origin === window.location.origin && destination.pathname === loginPath) {
+            window.location.replace(destination.href);
+        }
+    }
+
+    return response;
+}
+window.fetch = codebookFetch;
+
 // Reusable Custom Confirmation Modal (Promise-based)
 let activeConfirmCallback = null;
 
