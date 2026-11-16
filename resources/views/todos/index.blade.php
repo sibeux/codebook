@@ -2052,6 +2052,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     let activeTodoId = {{ $activeTodo ? $activeTodo->id : 'null' }};
     let currentProjectId = @json($currentProjectId ? (int) $currentProjectId : null);
     let currentWorkspaceId = @json((int) $currentWorkspaceId);
+    const newTodoDraftStorageKey = 'todos:new-card-draft:' + @json((string) auth()->user()->user_id) + ':' + (currentProjectId ?? 'none');
     const currentTodoStatusFilter = @json(request()->filled('status') ? request('status') : null);
     const todoSystemListIds = @json($todoLists->whereNotNull('system_status')->pluck('id', 'system_status'));
     const todoIndexPath = new URL("{{ route('todos.index') }}", window.location.origin).pathname;
@@ -2654,6 +2655,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     }
 
     function closeModals() {
+        clearNewTodoDraft();
         resolveTodoAction(false, false);
         document.getElementById('todo-confirm-modal').style.display = 'none';
         document.getElementById('todo-confirm-modal').setAttribute('aria-hidden', 'true');
@@ -3185,13 +3187,17 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         document.getElementById('task-title-input').classList.remove('is-invalid');
         document.getElementById('task-title-input').removeAttribute('aria-invalid');
 
+        const newTodoDraft = { title, description, todo_project_id, priority, todo_list_id };
+        saveNewTodoDraft(newTodoDraft);
+
         try {
             const res = await todoRequest("{{ route('todos.store') }}", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-                body: JSON.stringify({ title, description, todo_project_id, priority, todo_list_id })
+                body: JSON.stringify(newTodoDraft)
             });
             const data = await res.json();
+            clearNewTodoDraft();
             closeModals();
             document.getElementById('task-title-input').value = '';
             document.getElementById('task-desc-input').value = '';
@@ -3863,6 +3869,55 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
     bindTodoTitleEditor();
     bindTodoDescEditor();
     formatThreadEntryTimes();
+
+    function saveNewTodoDraft(draft) {
+        try {
+            window.sessionStorage.setItem(newTodoDraftStorageKey, JSON.stringify(draft));
+        } catch (error) {
+            // Storage can be unavailable in restricted browser contexts.
+        }
+    }
+
+    function clearNewTodoDraft() {
+        try {
+            window.sessionStorage.removeItem(newTodoDraftStorageKey);
+        } catch (error) {
+            // Storage can be unavailable in restricted browser contexts.
+        }
+    }
+
+    function restoreNewTodoDraft() {
+        if (!currentProjectId || activeTodoId) {
+            return;
+        }
+
+        let draft;
+        try {
+            draft = JSON.parse(window.sessionStorage.getItem(newTodoDraftStorageKey) || 'null');
+        } catch (error) {
+            clearNewTodoDraft();
+            return;
+        }
+
+        if (!draft || Number(draft.todo_project_id) !== Number(currentProjectId)) {
+            return;
+        }
+
+        const titleInput = document.getElementById('task-title-input');
+        const descriptionInput = document.getElementById('task-desc-input');
+        const listSelect = document.getElementById('task-list-select');
+        const prioritySelect = document.getElementById('task-priority-select');
+
+        titleInput.value = draft.title || '';
+        descriptionInput.value = draft.description || '';
+        prioritySelect.value = draft.priority || 'medium';
+        listSelect.value = String(draft.todo_list_id || '');
+        document.getElementById('modal-task').style.display = 'flex';
+        titleInput.focus();
+        showToast('Draft kartu dipulihkan. Periksa lalu simpan kembali.');
+    }
+
+    restoreNewTodoDraft();
 
     document.addEventListener('input', (event) => {
         if (event.target.id === 'task-title-input' && event.target.value.trim()) {
