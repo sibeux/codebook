@@ -183,6 +183,54 @@ class ShareNoteTest extends TestCase
         ]);
     }
 
+    public function test_owner_can_pin_and_unpin_a_note(): void
+    {
+        $user = User::create([
+            'email' => 'pin-note@sibeux.my.id',
+            'name' => 'Pin Note User',
+            'password' => bcrypt('password'),
+            'role' => 'user',
+        ]);
+        $note = Note::create([
+            'user_id' => $user->user_id,
+            'title' => 'Pinned note',
+            'mode' => 'markdown',
+        ]);
+
+        $this->actingAs($user)->putJson("/notes/{$note->id}", ['is_pinned' => true])
+            ->assertOk()
+            ->assertJsonPath('note.is_pinned', true);
+        $this->assertDatabaseHas('notes', ['id' => $note->id, 'is_pinned' => true]);
+
+        $this->actingAs($user)->putJson("/notes/{$note->id}", ['is_pinned' => false])
+            ->assertOk()
+            ->assertJsonPath('note.is_pinned', false);
+    }
+
+    public function test_user_cannot_pin_another_users_note(): void
+    {
+        $owner = User::create([
+            'email' => 'note-owner@sibeux.my.id',
+            'name' => 'Note Owner',
+            'password' => bcrypt('password'),
+            'role' => 'user',
+        ]);
+        $otherUser = User::create([
+            'email' => 'note-other@sibeux.my.id',
+            'name' => 'Other User',
+            'password' => bcrypt('password'),
+            'role' => 'user',
+        ]);
+        $note = Note::create([
+            'user_id' => $owner->user_id,
+            'title' => 'Private note',
+            'mode' => 'markdown',
+        ]);
+
+        $this->actingAs($otherUser)->putJson("/notes/{$note->id}", ['is_pinned' => true])->assertForbidden();
+        $this->assertDatabaseHas('notes', ['id' => $note->id, 'is_pinned' => false]);
+    }
+
     public function test_owner_can_regenerate_share_token(): void
     {
         $user = User::create([

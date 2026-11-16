@@ -91,7 +91,8 @@ class TodoController extends Controller
             $query->where('status', $request->status);
         }
 
-        $todos = $query->orderBy('position')
+        $todos = $query->orderByDesc('is_pinned')
+            ->orderBy('position')
             ->orderByRaw("CASE WHEN status = 'done' THEN 2 ELSE 1 END")
             ->latest()
             ->get();
@@ -358,6 +359,7 @@ class TodoController extends Controller
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'status' => ['sometimes', 'required', 'in:todo,in_progress,blocked,done'],
             'priority' => ['sometimes', 'required', 'in:low,medium,high,urgent'],
+            'is_pinned' => ['sometimes', 'boolean'],
             'todo_project_id' => [
                 'sometimes',
                 'required',

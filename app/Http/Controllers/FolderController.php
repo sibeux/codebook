@@ -74,6 +74,7 @@ class FolderController extends Controller
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'parent_id' => ['nullable', 'exists:folders,id'],
             'icon' => ['nullable', 'string', 'max:50'],
+            'is_pinned' => ['sometimes', 'boolean'],
         ]);
 
         if (array_key_exists('parent_id', $validated) && $validated['parent_id'] !== null) {

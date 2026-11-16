@@ -1,5 +1,5 @@
-<div class="tree-folder-group" data-folder-id="{{ $folder->id }}" data-depth="{{ $depth ?? 1 }}">
-    <div class="tree-folder collapsed" draggable="true" data-folder-id="{{ $folder->id }}" onclick="toggleFolder(this, event)">
+<div class="tree-folder-group" data-folder-id="{{ $folder->id }}" data-is-pinned="{{ (int) $folder->is_pinned }}" data-depth="{{ $depth ?? 1 }}">
+    <div class="tree-folder collapsed" draggable="true" data-folder-id="{{ $folder->id }}" data-is-pinned="{{ (int) $folder->is_pinned }}" onclick="toggleFolder(this, event)">
         <div class="tree-label">
             <button type="button" class="folder-toggle-btn" title="Buka folder" aria-expanded="false" onclick="event.stopPropagation(); toggleFolder(this.closest('.tree-folder'), event)">
                 <svg class="folder-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -8,8 +8,10 @@
             </button>
             <span class="tree-icon folder-icon">&#128193;</span>
             <span class="folder-name">{{ $folder->name }}</span>
+            <span class="tree-pinned-indicator" title="Folder disematkan" aria-label="Folder disematkan" @if(!$folder->is_pinned) hidden @endif>&#128204;</span>
         </div>
         <div class="item-actions" onclick="event.stopPropagation()">
+            <button type="button" class="mini-btn pin-toggle-btn {{ $folder->is_pinned ? 'is-active' : '' }}" title="{{ $folder->is_pinned ? 'Lepas pin folder' : 'Pin folder' }}" aria-label="{{ $folder->is_pinned ? 'Lepas pin folder' : 'Pin folder' }}" aria-pressed="{{ $folder->is_pinned ? 'true' : 'false' }}" onclick="toggleFolderPinned({{ $folder->id }}, event)">&#128204;</button>
             <button type="button" class="mini-btn" title="Tambah catatan atau subfolder" onclick="openFolderAddChoiceModal({{ $folder->id }}, event)">&#43;</button>
             <button type="button" class="mini-btn folder-rename-btn" title="Ubah nama folder" aria-label="Ubah nama folder {{ $folder->name }}" onclick="openRenameFolderModal({{ $folder->id }}, event)">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 4 4 4"/><path d="M4 20l4.5-1 10.8-10.8a2.1 2.1 0 0 0-3-3L5.5 16 4 20Z"/><path d="M13.5 6.5l4 4"/></svg>
@@ -31,13 +33,16 @@
                draggable="true"
                data-note-id="{{ $note->id }}"
                data-folder-id="{{ $folder->id }}"
+               data-is-pinned="{{ (int) $note->is_pinned }}"
                onclick="selectNote({{ $note->id }}, event)">
                 <div class="tree-label">
                     <span class="tree-icon">&#128221;</span>
                     <span class="note-title-text">{{ $note->title }}</span>
+                    <span class="tree-pinned-indicator" title="Catatan disematkan" aria-label="Catatan disematkan" @if(!$note->is_pinned) hidden @endif>&#128204;</span>
                     <span class="note-public-icon" id="tree-note-public-{{ $note->id }}" title="Catatan Publik" style="{{ $note->is_public ? 'font-size:10px;margin-left:4px;opacity:0.8;' : 'display:none;font-size:10px;margin-left:4px;opacity:0.8;' }}">&#127760;</span>
                 </div>
                 <div class="item-actions" onclick="event.preventDefault(); event.stopPropagation()">
+                    <button type="button" class="mini-btn pin-toggle-btn {{ $note->is_pinned ? 'is-active' : '' }}" title="{{ $note->is_pinned ? 'Lepas pin catatan' : 'Pin catatan' }}" aria-label="{{ $note->is_pinned ? 'Lepas pin catatan' : 'Pin catatan' }}" aria-pressed="{{ $note->is_pinned ? 'true' : 'false' }}" onclick="toggleNotePinned({{ $note->id }}, event)">&#128204;</button>
                     <button class="mini-btn danger" title="Hapus Catatan" onclick="deleteNote({{ $note->id }})">&times;</button>
                 </div>
             </a>

@@ -17,6 +17,11 @@ class Folder extends Model
         'name',
         'icon',
         'order',
+        'is_pinned',
+    ];
+
+    protected $casts = [
+        'is_pinned' => 'boolean',
     ];
 
     public function user()

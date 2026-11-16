@@ -524,6 +524,9 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
 .task-checkbox:checked::after { transform: rotate(45deg) scale(1); }
 
 .task-card.done .task-checkbox { background: var(--todo-accent); border-color: var(--todo-accent); opacity: .7; }
+.task-pin-badge { display: inline-flex; align-items: center; color: var(--todo-accent); font-size: 11px; }
+.task-pin-toggle { display: inline-flex; align-items: center; gap: 5px; min-height: 27px; padding: 0 8px; border: 1px solid var(--border); border-radius: 7px; color: var(--muted); background: var(--panel); font: inherit; font-size: 11px; cursor: pointer; }
+.task-pin-toggle:hover, .task-pin-toggle.is-active { color: var(--todo-accent); border-color: var(--todo-accent-muted); background: var(--todo-accent-soft); }
 
 .task-card-body { flex: 1; min-width: 0; }
 
@@ -1652,7 +1655,7 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                     </header>
                     <div class="board-column-cards">
                         @forelse($columnTodos as $t)
-                            <article class="task-card board-task-card {{ $t->status === 'done' ? 'done' : '' }} {{ $activeTodo?->id === $t->id ? 'active' : '' }}" id="task-card-{{ $t->id }}" data-project-id="{{ $t->todo_project_id }}" data-todo-id="{{ $t->id }}" data-list-id="{{ $column->id }}" data-status="{{ $t->status }}" data-persisted-list-id="{{ $column->id }}" data-persisted-status="{{ $t->status }}" data-priority="{{ $t->priority }}" data-persisted-priority="{{ $t->priority }}" data-created-at="{{ $t->created_at->timestamp }}" data-updated-at="{{ $t->updated_at->timestamp }}" draggable="true" ondragstart="startTodoDrag(event, {{ $t->id }})" ondragend="endTodoDrag(event)">
+                                            <article class="task-card board-task-card {{ $t->status === 'done' ? 'done' : '' }} {{ $activeTodo?->id === $t->id ? 'active' : '' }}" id="task-card-{{ $t->id }}" data-project-id="{{ $t->todo_project_id }}" data-todo-id="{{ $t->id }}" data-list-id="{{ $column->id }}" data-status="{{ $t->status }}" data-persisted-list-id="{{ $column->id }}" data-persisted-status="{{ $t->status }}" data-priority="{{ $t->priority }}" data-persisted-priority="{{ $t->priority }}" data-is-pinned="{{ (int) $t->is_pinned }}" data-persisted-is-pinned="{{ (int) $t->is_pinned }}" data-created-at="{{ $t->created_at->timestamp }}" data-updated-at="{{ $t->updated_at->timestamp }}" draggable="true" ondragstart="startTodoDrag(event, {{ $t->id }})" ondragend="endTodoDrag(event)">
                                 <div class="task-checkbox-wrap">
                                     <input type="checkbox" class="task-checkbox" aria-label="Mark {{ $t->title }} done" {{ $t->status === 'done' ? 'checked' : '' }} onclick="event.stopPropagation(); toggleTaskDone({{ $t->id }}, this.checked)">
                                 </div>
@@ -1661,6 +1664,9 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                                         <div class="task-title-text"><span class="task-title-label">{{ $t->title }}</span></div>
                                     </a>
                                     <div class="task-card-meta">
+                                        @if($t->is_pinned)
+                                            <span class="task-pin-badge" title="Pinned card" aria-label="Pinned card">&#128204;</span>
+                                        @endif
                                         @if($t->project)
                                             <span style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;color:var(--muted);">
                                                 <span class="project-dot" style="width:5px;height:5px;background:{{ $t->project->color }};"></span>{{ $t->project->name }}
@@ -1748,6 +1754,10 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                                                 <option value="{{ $todoList->id }}" {{ $activeTodo->todo_list_id === $todoList->id ? 'selected' : '' }}>{{ $todoList->name }}</option>
                                             @endforeach
                                         </select>
+                                        <button type="button" class="task-pin-toggle {{ $activeTodo->is_pinned ? 'is-active' : '' }}" id="task-pin-toggle" data-is-pinned="{{ (int) $activeTodo->is_pinned }}" aria-pressed="{{ $activeTodo->is_pinned ? 'true' : 'false' }}" onclick="toggleTaskPinned({{ $activeTodo->id }})">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 3 5 5-4 1-4 4v4l-2 2-2-6-6-2 2-2h4l4-4 1-4Z"/></svg>
+                                            <span>{{ $activeTodo->is_pinned ? 'Pinned' : 'Pin card' }}</span>
+                                        </button>
                                     </div>
 
                                     {{-- Title display --}}
@@ -2484,12 +2494,20 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                 });
             }
 
+            const sortOrder = new Map(sortedCards.map((card, index) => [card, index]));
+            sortedCards = [...sortedCards].sort((first, second) =>
+                Number(second.dataset.isPinned || 0) - Number(first.dataset.isPinned || 0)
+                || sortOrder.get(first) - sortOrder.get(second)
+            );
+
             cards.forEach((card) => {
                 card.draggable = isManualOrder;
                 card.style.order = '';
             });
 
-            if (!isManualOrder) {
+            if (isManualOrder) {
+                sortedCards.forEach((card) => cardsContainer.appendChild(card));
+            } else {
                 sortedCards.forEach((card, index) => {
                     card.style.order = String(index);
                 });
@@ -3755,6 +3773,10 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
                 });
             }
 
+            if (payload.todo && Object.prototype.hasOwnProperty.call(payload.todo, 'is_pinned')) {
+                syncTaskPinnedControls(todoId, payload.todo.is_pinned, true);
+            }
+
             return payload.todo;
         });
 
@@ -3792,6 +3814,56 @@ body:has(.todo-shell.card-modal-open) { overflow: hidden; }
         }
 
         applyTodoCardSort();
+    }
+
+    function syncTaskPinnedControls(todoId, isPinned, isPersisted = false) {
+        const card = document.getElementById(`task-card-${todoId}`);
+        const pinned = Boolean(isPinned);
+        const pinToggle = document.getElementById('task-pin-toggle');
+
+        if (card) {
+            card.dataset.isPinned = pinned ? '1' : '0';
+            if (isPersisted) card.dataset.persistedIsPinned = card.dataset.isPinned;
+
+            const meta = card.querySelector('.task-card-meta');
+            let indicator = meta?.querySelector('.task-pin-badge');
+            if (pinned && meta && !indicator) {
+                indicator = document.createElement('span');
+                indicator.className = 'task-pin-badge';
+                indicator.title = 'Pinned card';
+                indicator.setAttribute('aria-label', 'Pinned card');
+                indicator.textContent = '📌';
+                meta.prepend(indicator);
+            } else if (!pinned) {
+                indicator?.remove();
+            }
+        }
+
+        if (pinToggle) {
+            pinToggle.dataset.isPinned = pinned ? '1' : '0';
+            pinToggle.classList.toggle('is-active', pinned);
+            pinToggle.setAttribute('aria-pressed', String(pinned));
+            pinToggle.querySelector('span').textContent = pinned ? 'Pinned' : 'Pin card';
+        }
+
+        applyTodoCardSort();
+    }
+
+    async function toggleTaskPinned(todoId) {
+        const card = document.getElementById(`task-card-${todoId}`);
+        const pinToggle = document.getElementById('task-pin-toggle');
+        if (!card || !pinToggle) return;
+
+        const previousValue = card.dataset.isPinned === '1';
+        const nextValue = !previousValue;
+        syncTaskPinnedControls(todoId, nextValue);
+
+        try {
+            await queueTodoCardUpdate(card, { is_pinned: nextValue });
+        } catch (error) {
+            syncTaskPinnedControls(todoId, previousValue, true);
+            showToast(error.message || 'Pin card tidak dapat disimpan.');
+        }
     }
 
     async function updateTaskPriority(priorityTrigger, nextPriority) {

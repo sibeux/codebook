@@ -74,6 +74,40 @@ class TodoFeatureTest extends TestCase
         $response->assertRedirect(route('todos.index', ['active' => $todo->id]));
     }
 
+    public function test_user_can_pin_a_card_and_another_user_cannot_change_it(): void
+    {
+        $user = $this->makeUser();
+        $project = TodoProject::create([
+            'user_id' => $user->user_id,
+            'name' => 'Pin test project',
+        ]);
+        TodoList::ensureSystemLists($user, $project);
+        $todoList = TodoList::where('todo_project_id', $project->id)
+            ->where('system_status', 'todo')
+            ->firstOrFail();
+        $todo = Todo::create([
+            'user_id' => $user->user_id,
+            'todo_project_id' => $project->id,
+            'todo_list_id' => $todoList->id,
+            'title' => 'Pinned task',
+        ]);
+
+        $this->actingAs($user)->putJson(route('todos.update', $todo), ['is_pinned' => true])
+            ->assertOk()
+            ->assertJsonPath('todo.is_pinned', true);
+        $this->assertDatabaseHas('todos', ['id' => $todo->id, 'is_pinned' => true]);
+
+        $otherUser = User::create([
+            'email' => 'another-dev@sibeux.my.id',
+            'name' => 'Another Dev',
+            'password' => bcrypt('password'),
+            'role' => 'user',
+        ]);
+
+        $this->actingAs($otherUser)->putJson(route('todos.update', $todo), ['is_pinned' => false])->assertForbidden();
+        $this->assertDatabaseHas('todos', ['id' => $todo->id, 'is_pinned' => true]);
+    }
+
     public function test_user_can_edit_a_comment_on_their_task(): void
     {
         $user = $this->makeUser();

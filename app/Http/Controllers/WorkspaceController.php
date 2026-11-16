@@ -16,6 +16,7 @@ class WorkspaceController extends Controller
         // Retrieve all folders for user with their notes in eager loaded queries
         $allFolders = Folder::where('user_id', $userId)
             ->with('notes')
+            ->orderByDesc('is_pinned')
             ->orderBy('order')
             ->orderBy('name')
             ->get();

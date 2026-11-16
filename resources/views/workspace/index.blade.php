@@ -86,13 +86,16 @@
                            class="tree-note {{ $activeNote && $activeNote->id === $note->id ? 'active' : '' }}" 
                            draggable="true"
                            data-note-id="{{ $note->id }}"
+                           data-is-pinned="{{ (int) $note->is_pinned }}"
                            onclick="selectNote({{ $note->id }}, event)">
                             <div class="tree-label">
                                 <span class="tree-icon">&#128221;</span>
                                 <span class="note-title-text">{{ $note->title }}</span>
+                                <span class="tree-pinned-indicator" title="Catatan disematkan" aria-label="Catatan disematkan" @if(!$note->is_pinned) hidden @endif>&#128204;</span>
                                 <span class="note-public-icon" id="tree-note-public-{{ $note->id }}" title="Catatan Publik" style="{{ $note->is_public ? 'font-size:10px;margin-left:4px;opacity:0.8;' : 'display:none;font-size:10px;margin-left:4px;opacity:0.8;' }}">&#127760;</span>
                             </div>
                             <div class="item-actions" onclick="event.preventDefault(); event.stopPropagation()">
+                                <button type="button" class="mini-btn pin-toggle-btn {{ $note->is_pinned ? 'is-active' : '' }}" title="{{ $note->is_pinned ? 'Lepas pin catatan' : 'Pin catatan' }}" aria-label="{{ $note->is_pinned ? 'Lepas pin catatan' : 'Pin catatan' }}" aria-pressed="{{ $note->is_pinned ? 'true' : 'false' }}" onclick="toggleNotePinned({{ $note->id }}, event)">&#128204;</button>
                                 <button class="mini-btn danger" title="Hapus Catatan" onclick="deleteNote({{ $note->id }})">&times;</button>
                             </div>
                         </a>

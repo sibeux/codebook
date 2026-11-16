@@ -20,11 +20,13 @@ class Todo extends Model
         'description',
         'status',
         'priority',
+        'is_pinned',
         'due_at',
     ];
 
     protected $casts = [
         'due_at' => 'datetime',
+        'is_pinned' => 'boolean',
     ];
 
     public function user(): BelongsTo

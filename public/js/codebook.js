@@ -1691,6 +1691,84 @@ async function deleteNote(noteId) {
 }
 window.deleteNote = deleteNote;
 
+function sortPinnedTreeItems(container) {
+    if (!container) return;
+
+    const folders = [...container.querySelectorAll(':scope > .tree-folder-group')];
+    const notes = [...container.querySelectorAll(':scope > .tree-note')];
+    const sortPinnedFirst = (items) => items.sort((first, second) => Number(second.dataset.isPinned || 0) - Number(first.dataset.isPinned || 0));
+
+    sortPinnedFirst(folders).forEach((folder) => container.appendChild(folder));
+    sortPinnedFirst(notes).forEach((note) => container.appendChild(note));
+}
+
+async function updateTreeItemPin({ type, id, item, button, pinned }) {
+    const endpoint = type === 'note' ? `/notes/${id}` : `/folders/${id}`;
+    const container = type === 'note' ? item.parentElement : item.querySelector(':scope > .tree-children');
+    const previousValue = item.dataset.isPinned === '1';
+
+    const setPinned = (value) => {
+        item.dataset.isPinned = value ? '1' : '0';
+        if (type === 'folder') {
+            item.querySelector(':scope > .tree-folder').dataset.isPinned = item.dataset.isPinned;
+        }
+
+        const indicator = item.querySelector('.tree-pinned-indicator');
+        if (indicator) indicator.hidden = !value;
+        button?.classList.toggle('is-active', value);
+        button?.setAttribute('aria-pressed', String(value));
+        button?.setAttribute('aria-label', `${value ? 'Lepas pin' : 'Pin'} ${type === 'note' ? 'catatan' : 'folder'}`);
+        button?.setAttribute('title', `${value ? 'Lepas pin' : 'Pin'} ${type === 'note' ? 'catatan' : 'folder'}`);
+        sortPinnedTreeItems(container);
+    };
+
+    setPinned(pinned);
+
+    try {
+        const response = await fetch(endpoint, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+            },
+            body: JSON.stringify({ is_pinned: pinned })
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || Object.values(data.errors || {}).flat()[0] || 'Pin tidak dapat disimpan.');
+        }
+
+        setPinned(Boolean(data[type]?.is_pinned));
+    } catch (error) {
+        setPinned(previousValue);
+        alert(error.message || 'Pin tidak dapat disimpan.');
+    }
+}
+
+function toggleNotePinned(noteId, event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const note = document.querySelector(`.tree-note[data-note-id="${noteId}"]`);
+    const button = event?.currentTarget || note?.querySelector('.pin-toggle-btn');
+    if (!note || !button) return;
+
+    updateTreeItemPin({ type: 'note', id: noteId, item: note, button, pinned: note.dataset.isPinned !== '1' });
+}
+window.toggleNotePinned = toggleNotePinned;
+
+function toggleFolderPinned(folderId, event) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    const folder = document.querySelector(`.tree-folder-group[data-folder-id="${folderId}"]`);
+    const button = event?.currentTarget || folder?.querySelector('.pin-toggle-btn');
+    if (!folder || !button) return;
+
+    updateTreeItemPin({ type: 'folder', id: folderId, item: folder, button, pinned: folder.dataset.isPinned !== '1' });
+}
+window.toggleFolderPinned = toggleFolderPinned;
+
 // Delete Folder
 async function deleteFolder(folderId) {
     const folderGroup = document.querySelector(`.tree-folder-group[data-folder-id="${folderId}"]`);
@@ -2097,8 +2175,8 @@ async function submitNewFolder(e) {
             if (noNotice) noNotice.remove();
 
             const folderHtml = `
-                <div class="tree-folder-group" data-folder-id="${data.folder.id}" data-depth="${depth}">
-                    <div class="tree-folder collapsed" draggable="true" data-folder-id="${data.folder.id}" onclick="toggleFolder(this, event)">
+                <div class="tree-folder-group" data-folder-id="${data.folder.id}" data-is-pinned="${data.folder.is_pinned ? 1 : 0}" data-depth="${depth}">
+                    <div class="tree-folder collapsed" draggable="true" data-folder-id="${data.folder.id}" data-is-pinned="${data.folder.is_pinned ? 1 : 0}" onclick="toggleFolder(this, event)">
                         <div class="tree-label">
                             <button type="button" class="folder-toggle-btn" title="Buka folder" aria-expanded="false" onclick="event.stopPropagation(); toggleFolder(this.closest('.tree-folder'), event)">
                                 <svg class="folder-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -2107,8 +2185,10 @@ async function submitNewFolder(e) {
                             </button>
                             <span class="tree-icon folder-icon">&#128193;</span>
                             <span class="folder-name">${data.folder.name}</span>
+                            <span class="tree-pinned-indicator" title="Folder disematkan" aria-label="Folder disematkan" ${data.folder.is_pinned ? '' : 'hidden'}>&#128204;</span>
                         </div>
                         <div class="item-actions" onclick="event.stopPropagation()">
+                            <button type="button" class="mini-btn pin-toggle-btn" title="Pin folder" aria-label="Pin folder" aria-pressed="false" onclick="toggleFolderPinned(${data.folder.id}, event)">&#128204;</button>
                             <button type="button" class="mini-btn" title="Tambah catatan atau subfolder" onclick="openFolderAddChoiceModal(${data.folder.id}, event)">&#43;</button>
                             <button type="button" class="mini-btn folder-rename-btn" title="Ubah nama folder" aria-label="Ubah nama folder ${data.folder.name}" onclick="openRenameFolderModal(${data.folder.id}, event)">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 4 4 4"/><path d="M4 20l4.5-1 10.8-10.8a2.1 2.1 0 0 0-3-3L5.5 16 4 20Z"/><path d="M13.5 6.5l4 4"/></svg>
@@ -2151,10 +2231,12 @@ async function submitNewFolder(e) {
                         parentHeader.classList.remove('collapsed');
                         updateFolderToggleState(parentHeader);
                     }
+                    sortPinnedTreeItems(childrenContainer);
                 }
             } else {
                 const container = document.getElementById('folders-container') || tree;
                 container.insertAdjacentHTML('afterbegin', folderHtml);
+                sortPinnedTreeItems(container);
             }
 
             // Also add option to folder-parent-select and note-folder-select
@@ -2218,14 +2300,17 @@ async function submitNewNote(e) {
                    class="tree-note active" 
                    draggable="true"
                    data-note-id="${data.note.id}"
+                   data-is-pinned="${data.note.is_pinned ? 1 : 0}"
                    ${folderId ? `data-folder-id="${folderId}"` : ''}
                    onclick="selectNote(${data.note.id}, event)">
                     <div class="tree-label">
                         <span class="tree-icon">&#128221;</span>
                         <span class="note-title-text">${data.note.title}</span>
+                        <span class="tree-pinned-indicator" title="Catatan disematkan" aria-label="Catatan disematkan" ${data.note.is_pinned ? '' : 'hidden'}>&#128204;</span>
                         <span class="note-public-icon" id="tree-note-public-${data.note.id}" title="Catatan Publik" style="${data.note.is_public ? 'font-size:10px;margin-left:4px;opacity:0.8;' : 'display:none;font-size:10px;margin-left:4px;opacity:0.8;'}">&#127760;</span>
                     </div>
                     <div class="item-actions" onclick="event.preventDefault(); event.stopPropagation()">
+                        <button type="button" class="mini-btn pin-toggle-btn ${data.note.is_pinned ? 'is-active' : ''}" title="${data.note.is_pinned ? 'Lepas pin catatan' : 'Pin catatan'}" aria-label="${data.note.is_pinned ? 'Lepas pin catatan' : 'Pin catatan'}" aria-pressed="${data.note.is_pinned ? 'true' : 'false'}" onclick="toggleNotePinned(${data.note.id}, event)">&#128204;</button>
                         <button class="mini-btn danger" title="Hapus Catatan" onclick="deleteNote(${data.note.id})">&times;</button>
                     </div>
                 </a>
@@ -2255,12 +2340,14 @@ async function submitNewNote(e) {
                         parentHeader.classList.remove('collapsed');
                         updateFolderToggleState(parentHeader);
                     }
+                    sortPinnedTreeItems(folderChildren);
                 }
             } else {
                 const rootSection = document.getElementById('root-notes-section');
                 if (rootSection) rootSection.style.display = 'block';
                 const container = document.getElementById('root-notes-container') || document.getElementById('sidebar-tree');
                 container.insertAdjacentHTML('beforeend', noteHtml);
+                sortPinnedTreeItems(container);
             }
 
             // Select this newly created note in-place without page reload
@@ -2697,6 +2784,7 @@ async function moveNoteToFolder(noteId, targetFolderId) {
 
                     // Notes are appended below any subfolders
                     children.appendChild(noteEl);
+                    sortPinnedTreeItems(children);
 
                     const folderHeader = targetGroup.querySelector('.tree-folder');
                     if (folderHeader) {
@@ -2709,7 +2797,10 @@ async function moveNoteToFolder(noteId, targetFolderId) {
                 const rootSection = document.getElementById('root-notes-section');
                 const rootContainer = document.getElementById('root-notes-container');
                 if (rootSection) rootSection.style.display = 'block';
-                if (rootContainer) rootContainer.appendChild(noteEl);
+                if (rootContainer) {
+                    rootContainer.appendChild(noteEl);
+                    sortPinnedTreeItems(rootContainer);
+                }
             }
 
             if (oldParentGroup) {

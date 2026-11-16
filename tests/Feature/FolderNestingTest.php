@@ -174,6 +174,23 @@ class FolderNestingTest extends TestCase
         ]);
     }
 
+    public function test_user_can_pin_and_unpin_a_folder(): void
+    {
+        $folder = Folder::create([
+            'user_id' => $this->user->user_id,
+            'name' => 'Pinned folder',
+        ]);
+
+        $this->actingAs($this->user)->putJson("/folders/{$folder->id}", ['is_pinned' => true])
+            ->assertOk()
+            ->assertJsonPath('folder.is_pinned', true);
+        $this->assertDatabaseHas('folders', ['id' => $folder->id, 'is_pinned' => true]);
+
+        $this->actingAs($this->user)->putJson("/folders/{$folder->id}", ['is_pinned' => false])
+            ->assertOk()
+            ->assertJsonPath('folder.is_pinned', false);
+    }
+
     public function test_user_cannot_create_subfolder_in_another_users_folder(): void
     {
         $otherUser = User::create([

@@ -800,8 +800,22 @@ main {
 }
 
 .tree-folder:hover .item-actions,
-.tree-note:hover .item-actions {
+.tree-note:hover .item-actions,
+.tree-folder:focus-within .item-actions,
+.tree-note:focus-within .item-actions {
   display: inline-flex;
+}
+
+.tree-pinned-indicator {
+  flex: 0 0 auto;
+  color: var(--todo-accent, #6366f1);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.pin-toggle-btn.is-active {
+  color: var(--todo-accent, #6366f1);
+  background: var(--todo-accent-soft, rgba(99, 102, 241, .12));
 }
 
 .mini-btn {
